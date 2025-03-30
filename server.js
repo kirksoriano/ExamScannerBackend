@@ -10,14 +10,8 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
-// ✅ Database Connection
-const db = mysql.createPool({
-    uri: process.env.DATABASE_URL, // Uses Railway's connection string
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
-
+// ✅ Create a MySQL Connection Pool using Railway's URL
+const db = mysql.createPool(process.env.DATABASE_URL);
 
 // ✅ Check Database Connection
 (async () => {
@@ -26,7 +20,8 @@ const db = mysql.createPool({
         console.log("✅ Connected to Railway MySQL Database");
         connection.release();
     } catch (error) {
-        console.error("❌ Database connection failed:", error);
+        console.error("❌ Database connection failed:", error.message);
+        process.exit(1); // Exit process if DB connection fails
     }
 })();
 
