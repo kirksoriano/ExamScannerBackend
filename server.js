@@ -10,27 +10,28 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
-// ✅ Use Railway Environment Variables for Database Connection
+// ✅ Database Connection
 const db = mysql.createPool({
-    host: process.env.MYSQLHOST, 
+    host: process.env.MYSQLHOST || "127.0.0.1", // Ensure correct host
     user: process.env.MYSQLUSER,
     password: process.env.MYSQLPASSWORD,
-    database: process.env.MYSQLDATABASE,
-    port: process.env.MYSQLPORT,
+    database: process.env.MYSQLDATABASE, // Fix env variable issue
+    port: process.env.MYSQLPORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
 
-// ✅ Check if database connection is successful
-db.getConnection()
-    .then(() => console.log("✅ Connected to Railway MySQL Database"))
-    .catch(err => console.error("❌ Database connection failed:", err.message));
-
-// ✅ Test API Route
-app.get("/", (req, res) => {
-    res.send("🚀 Exam Scanner Backend is running!");
-});
+// ✅ Check Database Connection
+(async () => {
+    try {
+        const connection = await db.getConnection();
+        console.log("✅ Connected to Railway MySQL Database");
+        connection.release();
+    } catch (error) {
+        console.error("❌ Database connection failed:", error);
+    }
+})();
 
 // ✅ Fetch all classes with students
 app.get("/classes", async (req, res) => {
