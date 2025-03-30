@@ -12,15 +12,12 @@ app.use(express.json());
 
 // ✅ Database Connection
 const db = mysql.createPool({
-    host: process.env.MYSQLHOST || "127.0.0.1", // Ensure correct host
-    user: process.env.MYSQLUSER,
-    password: process.env.MYSQLPASSWORD,
-    database: process.env.MYSQLDATABASE, // Fix env variable issue
-    port: process.env.MYSQLPORT || 3306,
+    uri: process.env.DATABASE_URL, // Uses Railway's connection string
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
+
 
 // ✅ Check Database Connection
 (async () => {
