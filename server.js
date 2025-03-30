@@ -1,20 +1,22 @@
-const express = require('express');
-const mysql = require('mysql2/promise');
-const cors = require('cors');
+require("dotenv").config();
+const express = require("express");
+const mysql = require("mysql2/promise");
+const cors = require("cors");
 
 const app = express();
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Database Connection
+// ✅ Use Railway Environment Variables for Database Connection
 const db = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    password: 'kirk24', // Change this if you have a different password
-    database: 'exam_scanner_db',
+    host: process.env.MYSQLHOST, 
+    user: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    database: process.env.MYSQLDATABASE,
+    port: process.env.MYSQLPORT,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -22,11 +24,16 @@ const db = mysql.createPool({
 
 // ✅ Check if database connection is successful
 db.getConnection()
-    .then(() => console.log("✅ Connected to MySQL Database"))
+    .then(() => console.log("✅ Connected to Railway MySQL Database"))
     .catch(err => console.error("❌ Database connection failed:", err.message));
 
+// ✅ Test API Route
+app.get("/", (req, res) => {
+    res.send("🚀 Exam Scanner Backend is running!");
+});
+
 // ✅ Fetch all classes with students
-app.get('/classes', async (req, res) => {
+app.get("/classes", async (req, res) => {
     try {
         const [classes] = await db.query("SELECT * FROM classes");
 
@@ -43,7 +50,7 @@ app.get('/classes', async (req, res) => {
 });
 
 // ✅ Fetch students for a specific class
-app.get('/classes/:classId/students', async (req, res) => {
+app.get("/classes/:classId/students", async (req, res) => {
     const classId = req.params.classId;
 
     try {
@@ -56,7 +63,7 @@ app.get('/classes/:classId/students', async (req, res) => {
 });
 
 // ✅ Add a new class
-app.post('/classes', async (req, res) => {
+app.post("/classes", async (req, res) => {
     const { name, teacher_id } = req.body;
 
     if (!name || !teacher_id) {
@@ -77,7 +84,7 @@ app.post('/classes', async (req, res) => {
 });
 
 // ✅ Add a new student
-app.post('/students', async (req, res) => {
+app.post("/students", async (req, res) => {
     const { name, grade_level, class_id } = req.body;
 
     if (!name || !grade_level || !class_id) {
@@ -101,7 +108,7 @@ app.post('/students', async (req, res) => {
 });
 
 // ✅ Update a student by ID
-app.put('/students/:id', async (req, res) => {
+app.put("/students/:id", async (req, res) => {
     const { name, grade_level, class_id } = req.body;
     const id = parseInt(req.params.id);
 
@@ -127,7 +134,7 @@ app.put('/students/:id', async (req, res) => {
 });
 
 // ✅ Update a class by ID
-app.put('/classes/:id', async (req, res) => {
+app.put("/classes/:id", async (req, res) => {
     const { name } = req.body;
     const id = parseInt(req.params.id);
 
@@ -150,7 +157,7 @@ app.put('/classes/:id', async (req, res) => {
 });
 
 // ✅ DELETE a class by ID
-app.delete('/classes/:id', async (req, res) => {
+app.delete("/classes/:id", async (req, res) => {
     const id = parseInt(req.params.id);
 
     try {
@@ -172,7 +179,7 @@ app.delete('/classes/:id', async (req, res) => {
 });
 
 // ✅ DELETE a student by ID
-app.delete('/students/:id', async (req, res) => {
+app.delete("/students/:id", async (req, res) => {
     const id = parseInt(req.params.id);
 
     try {
@@ -189,7 +196,7 @@ app.delete('/students/:id', async (req, res) => {
     }
 });
 
-// Start the Server
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Server running on http://192.168.254.113:${PORT}`);
+// ✅ Start the Server
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ Server running on port ${PORT}`);
 });
