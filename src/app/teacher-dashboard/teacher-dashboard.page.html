@@ -1,0 +1,33 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Teacher Dashboard</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <h2>Welcome, Teacher!</h2>
+
+  <ion-list>
+    <ion-item button (click)="goToStudents()">
+      <ion-icon name="people" slot="start"></ion-icon>
+      <ion-label>Manage Students</ion-label>
+    </ion-item>
+
+    <ion-item button (click)="goToTOS()">
+      <ion-icon name="document-text" slot="start"></ion-icon>
+      <ion-label>Table of Specification (TOS)</ion-label>
+    </ion-item>
+
+    <ion-item button (click)="goToProfile()">
+      <ion-icon name="people" slot="start"></ion-icon>
+      <ion-label>Manage Profile</ion-label>
+    </ion-item>
+
+    <ion-item button (click)="goToTestProcessing()">
+      <ion-icon name="scan" slot="start"></ion-icon>
+      <ion-label>Test Paper Processing</ion-label>
+    </ion-item>
+  </ion-list>
+
+  
+</ion-content>
