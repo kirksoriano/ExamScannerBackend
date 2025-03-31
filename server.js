@@ -6,11 +6,15 @@ const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Debugging: Check if DATABASE_URL is loading
+console.log("✅ DATABASE_URL:", process.env.DATABASE_URL);
 
-// ✅ Create a MySQL Connection Pool using Railway's URL
+if (!process.env.DATABASE_URL) {
+    console.error("❌ DATABASE_URL is missing. Check your environment variables.");
+    process.exit(1);
+}
+
+// ✅ Create a MySQL Connection Pool using Railway's Public Connection
 const db = mysql.createPool(process.env.DATABASE_URL);
 
 // ✅ Check Database Connection
@@ -21,9 +25,13 @@ const db = mysql.createPool(process.env.DATABASE_URL);
         connection.release();
     } catch (error) {
         console.error("❌ Database connection failed:", error.message);
-        process.exit(1); // Exit process if DB connection fails
+        process.exit(1);
     }
 })();
+
+// ✅ Middleware
+app.use(cors());
+app.use(express.json());
 
 // ✅ Fetch all classes with students
 app.get("/classes", async (req, res) => {
@@ -97,95 +105,6 @@ app.post("/students", async (req, res) => {
     } catch (error) {
         console.error("❌ Error adding student:", error.message);
         res.status(500).json({ error: "Database error while adding student." });
-    }
-});
-
-// ✅ Update a student by ID
-app.put("/students/:id", async (req, res) => {
-    const { name, grade_level, class_id } = req.body;
-    const id = parseInt(req.params.id);
-
-    if (!id || !name || !grade_level || !class_id) {
-        return res.status(400).json({ error: "Missing student data." });
-    }
-
-    try {
-        const [result] = await db.query(
-            "UPDATE students SET name = ?, grade_level = ?, class_id = ? WHERE id = ?",
-            [name, grade_level, class_id, id]
-        );
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "❌ Student not found." });
-        }
-
-        res.json({ message: "✅ Student updated successfully." });
-    } catch (error) {
-        console.error("❌ Error updating student:", error.message);
-        res.status(500).json({ error: "Database error while updating student." });
-    }
-});
-
-// ✅ Update a class by ID
-app.put("/classes/:id", async (req, res) => {
-    const { name } = req.body;
-    const id = parseInt(req.params.id);
-
-    if (!id || !name) {
-        return res.status(400).json({ error: "Missing class name or ID." });
-    }
-
-    try {
-        const [result] = await db.query("UPDATE classes SET name = ? WHERE id = ?", [name, id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "❌ Class not found." });
-        }
-
-        res.json({ message: "✅ Class updated successfully." });
-    } catch (error) {
-        console.error("❌ Error updating class:", error.message);
-        res.status(500).json({ error: "Database error while updating class." });
-    }
-});
-
-// ✅ DELETE a class by ID
-app.delete("/classes/:id", async (req, res) => {
-    const id = parseInt(req.params.id);
-
-    try {
-        // Delete students under the class first (to maintain foreign key constraints)
-        await db.query("DELETE FROM students WHERE class_id = ?", [id]);
-
-        // Delete the class
-        const [result] = await db.query("DELETE FROM classes WHERE id = ?", [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "❌ Class not found." });
-        }
-
-        res.json({ message: "✅ Class deleted successfully." });
-    } catch (error) {
-        console.error("❌ Error deleting class:", error.message);
-        res.status(500).json({ error: "Database error while deleting class." });
-    }
-});
-
-// ✅ DELETE a student by ID
-app.delete("/students/:id", async (req, res) => {
-    const id = parseInt(req.params.id);
-
-    try {
-        const [result] = await db.query("DELETE FROM students WHERE id = ?", [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "❌ Student not found." });
-        }
-
-        res.json({ message: "✅ Student deleted successfully." });
-    } catch (error) {
-        console.error("❌ Error deleting student:", error.message);
-        res.status(500).json({ error: "Database error while deleting student." });
     }
 });
 
