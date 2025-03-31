@@ -1,12 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { environment } from '../../environments/environment'; // ✅ Import environment
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'https://examscannerbackend-production.up.railway.app';
+  private apiUrl = 'https://examscannerbackend-production.up.railway.app';  // ✅ Make sure this is correct
 
   constructor(private http: HttpClient) {}
 

@@ -83,6 +83,27 @@ app.post("/classes", async (req, res) => {
         res.status(500).json({ error: "Database error while adding class." });
     }
 });
+// ✅ Delete a class
+app.delete("/classes/:classId", async (req, res) => {
+    const classId = req.params.classId;
+
+    try {
+        // First, delete students in this class (to prevent foreign key constraint errors)
+        await db.query("DELETE FROM students WHERE class_id = ?", [classId]);
+
+        // Then, delete the class
+        const [result] = await db.query("DELETE FROM classes WHERE id = ?", [classId]);
+
+        if (result.affectedRows > 0) {
+            res.json({ message: "✅ Class deleted successfully." });
+        } else {
+            res.status(404).json({ error: "Class not found." });
+        }
+    } catch (error) {
+        console.error("❌ Error deleting class:", error.message);
+        res.status(500).json({ error: "Database error while deleting class." });
+    }
+});
 
 // ✅ Add a new student
 app.post("/students", async (req, res) => {
@@ -156,6 +177,23 @@ app.put("/classes/:id", async (req, res) => {
     }
 });
 
+// ✅ Delete a student
+app.delete("/students/:studentId", async (req, res) => {
+    const studentId = req.params.studentId;
+
+    try {
+        const [result] = await db.query("DELETE FROM students WHERE id = ?", [studentId]);
+
+        if (result.affectedRows > 0) {
+            res.json({ message: "✅ Student deleted successfully." });
+        } else {
+            res.status(404).json({ error: "Student not found." });
+        }
+    } catch (error) {
+        console.error("❌ Error deleting student:", error.message);
+        res.status(500).json({ error: "Database error while deleting student." });
+    }
+});
 
 // ✅ Start the Server
 app.listen(PORT, "0.0.0.0", () => {

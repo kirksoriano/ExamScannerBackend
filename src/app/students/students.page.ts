@@ -13,7 +13,8 @@ import { HttpClientModule } from '@angular/common/http';
   imports: [CommonModule, FormsModule, IonicModule, HttpClientModule]
 })
 export class StudentsPage {
-  BASE_URL = 'http://192.168.254.113:5001';
+  BASE_URL = 'https://examscannerbackend-production.up.railway.app';
+
 
   classes: any[] = [];
   selectedClass: any = null;
@@ -33,17 +34,20 @@ export class StudentsPage {
 
   // ✅ Fetch all classes with students
   fetchClasses() {
+    console.log("🔄 Fetching classes from:", `${this.BASE_URL}/classes`);
+  
     this.http.get<any[]>(`${this.BASE_URL}/classes`).subscribe(
       (response) => {
         this.classes = response;
-        console.log("✅ Classes with students:", this.classes);
+        console.log("✅ Classes fetched successfully:", this.classes);
       },
       (error) => {
         console.error("❌ Error fetching classes:", error);
-        alert("Failed to load classes. Check server connection.");
+        alert(`Failed to load classes. Error: ${error.message}`);
       }
     );
   }
+  
 
   // ✅ Select a class
   selectClass(classItem: any) {
