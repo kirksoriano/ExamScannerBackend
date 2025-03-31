@@ -6,7 +6,7 @@ import { environment } from '../../environments/environment'; // ✅ Import envi
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = environment.apiUrl; // ✅ Use the deployed API URL
+  private apiUrl = 'https://examscannerbackend-production.up.railway.app';
 
   constructor(private http: HttpClient) {}
 

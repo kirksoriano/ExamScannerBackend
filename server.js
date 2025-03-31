@@ -107,6 +107,55 @@ app.post("/students", async (req, res) => {
         res.status(500).json({ error: "Database error while adding student." });
     }
 });
+// ✅ Update a student by ID
+app.put("/students/:id", async (req, res) => {
+    const { name, grade_level, class_id } = req.body;
+    const id = parseInt(req.params.id);
+
+    if (!id || !name || !grade_level || !class_id) {
+        return res.status(400).json({ error: "Missing student data." });
+    }
+
+    try {
+        const [result] = await db.query(
+            "UPDATE students SET name = ?, grade_level = ?, class_id = ? WHERE id = ?",
+            [name, grade_level, class_id, id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "❌ Student not found." });
+        }
+
+        res.json({ message: "✅ Student updated successfully." });
+    } catch (error) {
+        console.error("❌ Error updating student:", error.message);
+        res.status(500).json({ error: "Database error while updating student." });
+    }
+});
+
+// ✅ Update a class by ID
+app.put("/classes/:id", async (req, res) => {
+    const { name } = req.body;
+    const id = parseInt(req.params.id);
+
+    if (!id || !name) {
+        return res.status(400).json({ error: "Missing class name or ID." });
+    }
+
+    try {
+        const [result] = await db.query("UPDATE classes SET name = ? WHERE id = ?", [name, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "❌ Class not found." });
+        }
+
+        res.json({ message: "✅ Class updated successfully." });
+    } catch (error) {
+        console.error("❌ Error updating class:", error.message);
+        res.status(500).json({ error: "Database error while updating class." });
+    }
+});
+
 
 // ✅ Start the Server
 app.listen(PORT, "0.0.0.0", () => {
