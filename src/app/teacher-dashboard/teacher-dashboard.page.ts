@@ -27,5 +27,8 @@ export class TeacherDashboardPage {
   goToTestProcessing() {
     this.navCtrl.navigateForward('/test-processing');
   }
-  
+
+  goToAnswer() {
+    this.navCtrl.navigateForward('/answer');
+  }
 }

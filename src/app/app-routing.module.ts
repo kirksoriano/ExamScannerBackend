@@ -43,6 +43,10 @@ const routes: Routes = [
         (m) => m.TestProcessingPageModule
       ),
   },
+  {
+    path: 'answer',
+    loadChildren: () => import('./answer/answer.module').then( (m) => m.AnswerPageModule)
+  },
 ];
 
 @NgModule({

@@ -194,8 +194,34 @@ app.delete("/students/:studentId", async (req, res) => {
         res.status(500).json({ error: "Database error while deleting student." });
     }
 });
+app.post('/answer-sheets', async (req, res) => {
+    try {
+        const { examTitle, subject, gradeLevel, questions } = req.body;
+
+        // Save to database (assuming you have an "answer_sheets" table)
+        const [result] = await db.execute(
+            `INSERT INTO answer_sheets (exam_title, subject, grade_level, questions) VALUES (?, ?, ?, ?)`,
+            [examTitle, subject, gradeLevel, JSON.stringify(questions)]
+        );
+
+        res.status(201).json({ message: "Answer sheet saved successfully!", id: result.insertId });
+    } catch (error) {
+        console.error('❌ Error saving answer sheet:', error);
+        res.status(500).json({ error: "Failed to save answer sheet" });
+    }
+});
+app.get('/answer-sheets', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM answer_sheets');
+        res.json(rows);
+    } catch (error) {
+        console.error('❌ Error fetching answer sheets:', error);
+        res.status(500).json({ message: 'Error fetching answer sheets' });
+    }
+});
+
 
 // ✅ Start the Server
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Server running on port ${PORT}`);
-});
+}); 
