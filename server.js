@@ -83,6 +83,7 @@ app.post("/classes", async (req, res) => {
         res.status(500).json({ error: "Database error while adding class." });
     }
 });
+
 // ✅ Delete a class
 app.delete("/classes/:classId", async (req, res) => {
     const classId = req.params.classId;
@@ -128,6 +129,7 @@ app.post("/students", async (req, res) => {
         res.status(500).json({ error: "Database error while adding student." });
     }
 });
+
 // ✅ Update a student by ID
 app.put("/students/:id", async (req, res) => {
     const { name, grade_level, class_id } = req.body;
@@ -194,13 +196,15 @@ app.delete("/students/:studentId", async (req, res) => {
         res.status(500).json({ error: "Database error while deleting student." });
     }
 });
+
+// ✅ Add a new answer sheet
 app.post('/answer-sheets', async (req, res) => {
     try {
         const { examTitle, subject, gradeLevel, questions } = req.body;
 
         // Save to database (assuming you have an "answer_sheets" table)
         const [result] = await db.execute(
-            `INSERT INTO answer_sheets (exam_title, subject, grade_level, questions) VALUES (?, ?, ?, ?)`,
+            "INSERT INTO answer_sheets (exam_title, subject, grade_level, questions) VALUES (?, ?, ?, ?)",
             [examTitle, subject, gradeLevel, JSON.stringify(questions)]
         );
 
@@ -210,9 +214,11 @@ app.post('/answer-sheets', async (req, res) => {
         res.status(500).json({ error: "Failed to save answer sheet" });
     }
 });
+
+// ✅ Fetch all answer sheets
 app.get('/answer-sheets', async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM answer_sheets');
+        const [rows] = await db.query('SELECT * FROM answer_sheets'); // Change pool to db
         res.json(rows);
     } catch (error) {
         console.error('❌ Error fetching answer sheets:', error);
@@ -220,8 +226,7 @@ app.get('/answer-sheets', async (req, res) => {
     }
 });
 
-
 // ✅ Start the Server
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Server running on port ${PORT}`);
-}); 
+});

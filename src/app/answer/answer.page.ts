@@ -68,7 +68,8 @@ export class AnswerPage {
       },
       (error) => {
         console.error("❌ Error fetching answer sheets:", error);
+        alert("Failed to fetch answer sheets.");
       }
     );
   }
-}
+}  
