@@ -5,32 +5,39 @@
 </ion-header>
 
 <ion-content class="ion-padding">
+  <!-- Upload or Scan Test Paper Section -->
   <ion-card>
     <ion-card-header>
       <ion-card-title>Upload or Scan Test Paper</ion-card-title>
     </ion-card-header>
     <ion-card-content>
+      <!-- Input for file upload -->
       <input type="file" (change)="uploadImage($event)" accept="image/*">
+      <!-- Camera scan button -->
       <ion-button expand="full" color="primary" (click)="openCamera()">📸 Scan with Camera</ion-button>
     </ion-card-content>
   </ion-card>
 
+  <!-- Display preview image once selected -->
   <ion-card *ngIf="previewImage">
     <ion-img [src]="previewImage"></ion-img>
+    <!-- Process Image button -->
     <ion-button expand="full" color="success" (click)="processImage()">📊 Process Image</ion-button>
   </ion-card>
 
+  <!-- Display extracted data -->
   <ion-card *ngIf="extractedText">
     <ion-card-header>
       <ion-card-title>Extracted Data</ion-card-title>
     </ion-card-header>
     <ion-card-content>
-      <p><strong>Extracted Text:</strong> {{ extractedText }}</p>
-      <p><strong>Student Name:</strong> {{ studentName }}</p>
-      <p><strong>Student Score:</strong> {{ studentScore }}</p>
+      <p><strong>Extracted Text:</strong> {{ extractedText || 'No text extracted' }}</p>
+      <p><strong>Student Name:</strong> {{ studentName || 'Not Available' }}</p>
+      <p><strong>Student Score:</strong> {{ studentScore !== 0 ? studentScore : 'Not Available' }}</p>
 
-      <!-- ✅ New Button to Send Extracted Name to Backend -->
+      <!-- Button to send extracted data to backend -->
       <ion-button expand="full" color="tertiary" (click)="processTestPaper()">🔍 Match Name</ion-button>
     </ion-card-content>
   </ion-card>
+
 </ion-content>

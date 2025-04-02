@@ -31,22 +31,29 @@
       <ion-item>
         <ion-label>Question {{ i + 1 }}</ion-label>
         <ion-select [(ngModel)]="questions[i].answer" name="answer{{i}}">
-          <ion-select-option *ngFor="let option of answerOptions" [value]="option">{{ option }}</ion-select-option>
+          <ion-select-option *ngFor="let option of answerOptions" [value]="option">
+            {{ option }}
+          </ion-select-option>
         </ion-select>
       </ion-item>
     </div>
-    <ion-list>
-      <ion-item *ngFor="let sheet of answerSheets">
-        <ion-label>
-          <h2>{{ sheet.exam_title }}</h2>
-          <p>Subject: {{ sheet.subject }}</p>
-          <p>Grade Level: {{ sheet.grade_level }}</p>
-          <p>Questions: {{ sheet.questions }}</p>
-        </ion-label>
-      </ion-item>
-    </ion-list>
-    
 
     <ion-button expand="full" type="submit">Save Answer Sheet</ion-button>
   </form>
+
+  <ion-list>
+    <ion-item *ngFor="let sheet of answerSheets">
+      <ion-label>
+        <h2>{{ sheet.examTitle }}</h2>
+        <p>Subject: {{ sheet.subject }}</p>
+        <p>Grade Level: {{ sheet.gradeLevel }}</p>
+        <p>Questions:</p>
+        <ul>
+          <li *ngFor="let question of sheet.questions">
+            Question {{ question.questionNumber }}: {{ question.answer }}
+          </li>
+        </ul>
+      </ion-label>
+    </ion-item>
+  </ion-list>
 </ion-content>
