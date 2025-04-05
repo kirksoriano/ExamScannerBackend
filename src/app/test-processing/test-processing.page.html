@@ -5,38 +5,86 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-  <!-- Upload or Scan Test Paper Section -->
+
+  <!-- 📤 Upload or 📸 Scan Section -->
   <ion-card>
     <ion-card-header>
       <ion-card-title>Upload or Scan Test Paper</ion-card-title>
     </ion-card-header>
     <ion-card-content>
-      <!-- Input for file upload -->
       <input type="file" (change)="uploadImage($event)" accept="image/*">
-      <!-- Camera scan button -->
       <ion-button expand="full" color="primary" (click)="openCamera()">📸 Scan with Camera</ion-button>
     </ion-card-content>
   </ion-card>
 
-  <!-- Display preview image once selected -->
+  <!-- 🖼️ Preview Image -->
   <ion-card *ngIf="previewImage">
+    <ion-card-header>
+      <ion-card-title>Preview</ion-card-title>
+    </ion-card-header>
     <ion-img [src]="previewImage"></ion-img>
-    <!-- Process Image button -->
-    <ion-button expand="full" color="success" (click)="processImage()">📊 Process Image</ion-button>
+    <ion-card-content>
+      <ion-button expand="full" color="success" (click)="processImage()">📊 Process Image</ion-button>
+    </ion-card-content>
   </ion-card>
 
-  <!-- Display extracted data -->
+  <!-- 🧠 Extracted OCR Text -->
   <ion-card *ngIf="extractedText">
     <ion-card-header>
-      <ion-card-title>Extracted Data</ion-card-title>
+      <ion-card-title>Extracted Text (OCR)</ion-card-title>
     </ion-card-header>
     <ion-card-content>
-      <p><strong>Extracted Text:</strong> {{ extractedText || 'No text extracted' }}</p>
-      <p><strong>Student Name:</strong> {{ studentName || 'Not Available' }}</p>
-      <p><strong>Student Score:</strong> {{ studentScore !== 0 ? studentScore : 'Not Available' }}</p>
+      <ion-textarea readonly autoGrow>{{ extractedText }}</ion-textarea>
+    </ion-card-content>
+  </ion-card>
 
-      <!-- Button to send extracted data to backend -->
-      <ion-button expand="full" color="tertiary" (click)="processTestPaper()">🔍 Match Name</ion-button>
+  <!-- ✅ Detected Answers and Comparison -->
+  <ion-card *ngIf="detectedAnswers.length > 0">
+    <ion-card-header>
+      <ion-card-title>Detected Answers</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-list>
+        <ion-item *ngFor="let answer of detectedAnswers; let i = index">
+          <ion-label>
+            <p>
+              <strong>Q{{ i + 1 }}:</strong> 
+              <span [ngStyle]="{ color: answer === answerKey[i] ? 'green' : 'red' }">
+                {{ answer || 'No answer' }}
+              </span>
+              &nbsp;|&nbsp; Correct: <strong>{{ answerKey[i] }}</strong>
+            </p>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- 🧾 Score Summary -->
+  <ion-card *ngIf="studentScore >= 0">
+    <ion-card-header>
+      <ion-card-title>Test Results</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <h2 style="text-align: center;">🎯 Score: {{ studentScore }} / {{ answerKey.length }}</h2>
+      <ion-progress-bar [value]="studentScore / answerKey.length" color="tertiary"></ion-progress-bar>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- 📝 Exam Metadata Input -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Exam Information</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label position="stacked">Exam Title</ion-label>
+        <ion-input [(ngModel)]="examTitle" placeholder="Enter exam title"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-label position="stacked">Subject</ion-label>
+        <ion-input [(ngModel)]="subject" placeholder="Enter subject"></ion-input>
+      </ion-item>
     </ion-card-content>
   </ion-card>
 

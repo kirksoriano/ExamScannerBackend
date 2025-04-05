@@ -1,8 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, ViewChild } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+
+declare var cv: any; // Declare cv to avoid TypeScript errors
 
 @Component({
   selector: 'app-answer',
@@ -22,6 +24,9 @@ export class AnswerPage {
   answerOptions = ['A', 'B', 'C', 'D', 'True', 'False']; // Supports MCQs & True/False
 
   answerSheets: any[] = []; // Array to store fetched answer sheets
+
+  @ViewChild('canvas') canvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   constructor(private http: HttpClient) {}
 
@@ -72,4 +77,52 @@ export class AnswerPage {
       }
     );
   }
-}  
+
+  // Handle file selection
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.processImage(file);
+    }
+  }
+
+  // Process image using OpenCV.js
+  processImage(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = this.canvas.nativeElement;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+
+          // Convert to grayscale and process using OpenCV.js
+          const src = cv.imread(canvas);
+          const gray = new cv.Mat();
+          cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+
+          // Threshold to make the bubbles clearer
+          const thresh = new cv.Mat();
+          cv.threshold(gray, thresh, 150, 255, cv.THRESH_BINARY_INV);
+
+          // Detect circles (answer bubbles)
+          const circles = new cv.Mat();
+          cv.HoughCircles(thresh, circles, cv.HOUGH_GRADIENT, 1, 20, 100, 30, 10, 30);
+
+          console.log('Detected circles:', circles.data32F);
+
+          // Cleanup
+          src.delete();
+          gray.delete();
+          thresh.delete();
+          circles.delete();
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
