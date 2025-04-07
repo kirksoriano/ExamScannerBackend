@@ -31,4 +31,8 @@ export class TeacherDashboardPage {
   goToAnswer() {
     this.navCtrl.navigateForward('/answer');
   }
+  goBack() {
+    // Navigate back to the teacher-dashboard page
+    this.navCtrl.navigateBack('/teacher-dashboard');
+  }
 }
