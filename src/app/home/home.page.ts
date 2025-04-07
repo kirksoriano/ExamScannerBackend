@@ -6,15 +6,13 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AlertController, LoadingController } from '@ionic/angular';
 
-
 @Component({
   selector: 'app-home',
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, FormsModule]
+  imports: [CommonModule, IonicModule, FormsModule],
 })
-
 export class HomePage {
   loginEmail = '';
   loginPassword = '';
@@ -32,29 +30,31 @@ export class HomePage {
     });
     await loading.present();
 
-    this.http.post<any>('https://examscannerbackend-production.up.railway.app', {
-      email: this.loginEmail,
-      password: this.loginPassword,
-    }).subscribe(
-      async (res) => {
-        await loading.dismiss();
+    this.http
+      .post<any>('https://examscannerbackend-production.up.railway.app/login', {
+        email: this.loginEmail,
+        password: this.loginPassword,
+      })
+      .subscribe(
+        async (res) => {
+          await loading.dismiss();
 
-        // ✅ Store user in localStorage
-        localStorage.setItem('user', JSON.stringify(res.user));
+          // ✅ Store user data (adjust if your backend sends different structure)
+          localStorage.setItem('user', JSON.stringify(res.user));
 
-        // ✅ Redirect to teacher dashboard
-        this.router.navigate(['/teacher-dashboard']);
-      },
-      async (err) => {
-        await loading.dismiss();
+          // ✅ Navigate to teacher dashboard
+          this.router.navigate(['/teacher-dashboard']);
+        },
+        async (err) => {
+          await loading.dismiss();
 
-        const alert = await this.alertCtrl.create({
-          header: 'Login Failed',
-          message: err.error.message || 'Invalid email or password.',
-          buttons: ['OK'],
-        });
-        await alert.present();
-      }
-    );
+          const alert = await this.alertCtrl.create({
+            header: 'Login Failed',
+            message: err.error?.message || 'Invalid email or password.',
+            buttons: ['OK'],
+          });
+          await alert.present();
+        }
+      );
   }
 }
