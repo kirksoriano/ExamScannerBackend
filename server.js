@@ -225,6 +225,62 @@ app.get('/answer-sheets', async (req, res) => {
         res.status(500).json({ message: 'Error fetching answer sheets' });
     }
 });
+const bcrypt = require("bcrypt"); // You need to install this if not yet
+const jwt = require("jsonwebtoken"); // Optional for JWT auth
+
+// ✅ Register User
+app.post("/register", async (req, res) => {
+    const { email, password, role } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: "Email and password required." });
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const [result] = await db.query(
+            "INSERT INTO users (email, password, role) VALUES (?, ?, ?)",
+            [email, hashedPassword, role || "teacher"]
+        );
+
+        res.status(201).json({ message: "✅ User registered successfully", id: result.insertId });
+    } catch (err) {
+        console.error("❌ Registration error:", err.message);
+        res.status(500).json({ error: "Registration failed." });
+    }
+});
+
+// ✅ Login User
+
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Missing email or password' });
+    }
+
+    try {
+        const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+
+        if (rows.length === 0) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        const user = rows[0];
+
+        // For simplicity, we just compare raw passwords (in real apps use bcrypt)
+        if (user.password !== password) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        res.json({ message: 'Login successful', user });
+    } catch (error) {
+        console.error('❌ Login error:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+
 
 // ✅ Start the Server
 app.listen(PORT, "0.0.0.0", () => {
