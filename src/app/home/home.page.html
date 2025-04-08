@@ -1,44 +1,46 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Login</ion-title>
+    <ion-title>{{ isRegistering ? 'Register' : 'Login' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Welcome Back!</ion-card-title>
-      <ion-card-subtitle>Please log in to continue</ion-card-subtitle>
-    </ion-card-header>
+  <!-- Register Form -->
+  <form *ngIf="isRegistering" (submit)="register()">
+    <ion-item>
+      <ion-label position="floating">Name</ion-label>
+      <ion-input type="text" [(ngModel)]="registerName" name="name" required></ion-input>
+    </ion-item>
 
-    <ion-card-content>
-      <form (submit)="login()">
-        <ion-item>
-          <ion-label position="floating">Email</ion-label>
-          <ion-input
-            type="email"
-            [(ngModel)]="loginEmail"
-            name="email"
-            required
-          ></ion-input>
-        </ion-item>
+    <ion-item>
+      <ion-label position="floating">Email</ion-label>
+      <ion-input type="email" [(ngModel)]="registerEmail" name="registerEmail" required></ion-input>
+    </ion-item>
 
-        <ion-item>
-          <ion-label position="floating">Password</ion-label>
-          <ion-input
-            type="password"
-            [(ngModel)]="loginPassword"
-            name="password"
-            required
-          ></ion-input>
-        </ion-item>
+    <ion-item>
+      <ion-label position="floating">Password</ion-label>
+      <ion-input type="password" [(ngModel)]="registerPassword" name="registerPassword" required></ion-input>
+    </ion-item>
 
-        <div class="ion-margin-top">
-          <ion-button expand="block" type="submit" color="primary">
-            Login
-          </ion-button>
-        </div>
-      </form>
-    </ion-card-content>
-  </ion-card>
+    <ion-button expand="block" type="submit" class="ion-margin-top">Register</ion-button>
+  </form>
+
+  <!-- Login Form -->
+  <form *ngIf="!isRegistering" (submit)="login()">
+    <ion-item>
+      <ion-label position="floating">Email</ion-label>
+      <ion-input type="email" [(ngModel)]="loginEmail" name="loginEmail" required></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="floating">Password</ion-label>
+      <ion-input type="password" [(ngModel)]="loginPassword" name="loginPassword" required></ion-input>
+    </ion-item>
+
+    <ion-button expand="block" type="submit" class="ion-margin-top">Login</ion-button>
+  </form>
+
+  <ion-button expand="block" fill="clear" (click)="toggleMode()">
+    {{ isRegistering ? 'Already have an account? Login' : "Don't have an account? Register" }}
+  </ion-button>
 </ion-content>

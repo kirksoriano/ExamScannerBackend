@@ -230,25 +230,36 @@ const jwt = require("jsonwebtoken"); // Optional for JWT auth
 
 // ✅ Register User
 app.post("/register", async (req, res) => {
-    const { email, password, role } = req.body;
+    const { email, password, name } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ error: "Email and password required." });
+    console.log("📥 Register request body:", req.body);
+
+    if (!email || !password || !name) {
+        console.log("❌ Missing fields.");
+        return res.status(400).json({ message: "Missing required fields." });
     }
 
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+        if (existing.length > 0) {
+            console.log("⚠️ Email already exists.");
+            return res.status(409).json({ message: "Email already registered." });
+        }
+
         const [result] = await db.query(
-            "INSERT INTO users (email, password, role) VALUES (?, ?, ?)",
-            [email, hashedPassword, role || "teacher"]
+            "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+            [email, password, name]
         );
 
-        res.status(201).json({ message: "✅ User registered successfully", id: result.insertId });
+        console.log("✅ User registered:", result);
+        return res.status(201).json({ message: "User registered successfully." });
+
     } catch (err) {
-        console.error("❌ Registration error:", err.message);
-        res.status(500).json({ error: "Registration failed." });
+        console.error("❌ Server error during registration:", err);
+        return res.status(500).json({ message: "Server error during registration." });
     }
 });
+
 
 // ✅ Login User
 
