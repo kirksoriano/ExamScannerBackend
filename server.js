@@ -2,22 +2,20 @@ require("dotenv").config();
 const express = require("express");
 const mysql = require("mysql2/promise");
 const cors = require("cors");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Debugging: Check if DATABASE_URL is loading
 console.log("✅ DATABASE_URL:", process.env.DATABASE_URL);
-
 if (!process.env.DATABASE_URL) {
-    console.error("❌ DATABASE_URL is missing. Check your environment variables.");
+    console.error("❌ DATABASE_URL is missing.");
     process.exit(1);
 }
 
-// ✅ Create a MySQL Connection Pool using Railway's Public Connection
 const db = mysql.createPool(process.env.DATABASE_URL);
 
-// ✅ Check Database Connection
 (async () => {
     try {
         const connection = await db.getConnection();
@@ -29,14 +27,64 @@ const db = mysql.createPool(process.env.DATABASE_URL);
     }
 })();
 
-// ✅ Middleware
 app.use(cors());
 app.use(express.json());
 
-// ✅ Fetch all classes with students
-app.get("/classes", async (req, res) => {
+// ✅ Register User
+app.post("/register", async (req, res) => {
+    const { email, password, name } = req.body;
+    if (!email || !password || !name) {
+        return res.status(400).json({ message: "Missing required fields." });
+    }
+
     try {
-        const [classes] = await db.query("SELECT * FROM classes");
+        const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+        if (existing.length > 0) {
+            return res.status(409).json({ message: "Email already registered." });
+        }
+
+        const [result] = await db.query(
+            "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+            [email, password, name]
+        );
+
+        return res.status(201).json({ message: "User registered successfully." });
+    } catch (err) {
+        console.error("❌ Registration error:", err);
+        return res.status(500).json({ message: "Server error during registration." });
+    }
+});
+
+// ✅ Login User
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Missing email or password' });
+    }
+
+    try {
+        const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+
+        if (rows.length === 0 || rows[0].password !== password) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        const user = rows[0];
+        res.json({ message: 'Login successful', user });
+    } catch (error) {
+        console.error('❌ Login error:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// ✅ Fetch all classes for a specific user
+app.get("/classes", async (req, res) => {
+    const userId = req.query.userId;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+    try {
+        const [classes] = await db.query("SELECT * FROM classes WHERE teacher_id = ?", [userId]);
 
         for (const classItem of classes) {
             const [students] = await db.query("SELECT * FROM students WHERE class_id = ?", [classItem.id]);
@@ -50,37 +98,42 @@ app.get("/classes", async (req, res) => {
     }
 });
 
-// ✅ Fetch students for a specific class
-app.get("/classes/:classId/students", async (req, res) => {
-    const classId = req.params.classId;
-
-    try {
-        const [students] = await db.query("SELECT * FROM students WHERE class_id = ?", [classId]);
-        res.json(students);
-    } catch (error) {
-        console.error("❌ Error fetching students:", error.message);
-        res.status(500).json({ error: "Database error while fetching students." });
-    }
-});
-
 // ✅ Add a new class
 app.post("/classes", async (req, res) => {
     const { name, teacher_id } = req.body;
-
     if (!name || !teacher_id) {
         return res.status(400).json({ error: "Missing class name or teacher ID." });
     }
 
     try {
         const [result] = await db.query("INSERT INTO classes (name, teacher_id) VALUES (?, ?)", [name, teacher_id]);
-
-        res.status(201).json({
-            message: "✅ Class added successfully.",
-            class: { id: result.insertId, name, teacher_id }
-        });
+        res.status(201).json({ message: "✅ Class added successfully.", class: { id: result.insertId, name, teacher_id } });
     } catch (error) {
         console.error("❌ Error adding class:", error.message);
         res.status(500).json({ error: "Database error while adding class." });
+    }
+});
+
+// ✅ Update a class
+app.put("/classes/:id", async (req, res) => {
+    const { name } = req.body;
+    const id = parseInt(req.params.id);
+
+    if (!id || !name) {
+        return res.status(400).json({ error: "Missing class name or ID." });
+    }
+
+    try {
+        const [result] = await db.query("UPDATE classes SET name = ? WHERE id = ?", [name, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "❌ Class not found." });
+        }
+
+        res.json({ message: "✅ Class updated successfully." });
+    } catch (error) {
+        console.error("❌ Error updating class:", error.message);
+        res.status(500).json({ error: "Database error while updating class." });
     }
 });
 
@@ -89,10 +142,7 @@ app.delete("/classes/:classId", async (req, res) => {
     const classId = req.params.classId;
 
     try {
-        // First, delete students in this class (to prevent foreign key constraint errors)
         await db.query("DELETE FROM students WHERE class_id = ?", [classId]);
-
-        // Then, delete the class
         const [result] = await db.query("DELETE FROM classes WHERE id = ?", [classId]);
 
         if (result.affectedRows > 0) {
@@ -106,7 +156,20 @@ app.delete("/classes/:classId", async (req, res) => {
     }
 });
 
-// ✅ Add a new student
+// ✅ Get students by class
+app.get("/classes/:classId/students", async (req, res) => {
+    const classId = req.params.classId;
+
+    try {
+        const [students] = await db.query("SELECT * FROM students WHERE class_id = ?", [classId]);
+        res.json(students);
+    } catch (error) {
+        console.error("❌ Error fetching students:", error.message);
+        res.status(500).json({ error: "Database error while fetching students." });
+    }
+});
+
+// ✅ Add student
 app.post("/students", async (req, res) => {
     const { name, grade_level, class_id } = req.body;
 
@@ -116,21 +179,18 @@ app.post("/students", async (req, res) => {
 
     try {
         const [result] = await db.query(
-            "INSERT INTO students (name, grade_level, class_id) VALUES (?, ?, ?)", 
+            "INSERT INTO students (name, grade_level, class_id) VALUES (?, ?, ?)",
             [name, grade_level, class_id]
         );
 
-        res.status(201).json({
-            message: "✅ Student added successfully.",
-            student: { id: result.insertId, name, grade_level, class_id }
-        });
+        res.status(201).json({ message: "✅ Student added successfully.", student: { id: result.insertId, name, grade_level, class_id } });
     } catch (error) {
         console.error("❌ Error adding student:", error.message);
         res.status(500).json({ error: "Database error while adding student." });
     }
 });
 
-// ✅ Update a student by ID
+// ✅ Update student
 app.put("/students/:id", async (req, res) => {
     const { name, grade_level, class_id } = req.body;
     const id = parseInt(req.params.id);
@@ -156,30 +216,7 @@ app.put("/students/:id", async (req, res) => {
     }
 });
 
-// ✅ Update a class by ID
-app.put("/classes/:id", async (req, res) => {
-    const { name } = req.body;
-    const id = parseInt(req.params.id);
-
-    if (!id || !name) {
-        return res.status(400).json({ error: "Missing class name or ID." });
-    }
-
-    try {
-        const [result] = await db.query("UPDATE classes SET name = ? WHERE id = ?", [name, id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "❌ Class not found." });
-        }
-
-        res.json({ message: "✅ Class updated successfully." });
-    } catch (error) {
-        console.error("❌ Error updating class:", error.message);
-        res.status(500).json({ error: "Database error while updating class." });
-    }
-});
-
-// ✅ Delete a student
+// ✅ Delete student
 app.delete("/students/:studentId", async (req, res) => {
     const studentId = req.params.studentId;
 
@@ -197,101 +234,37 @@ app.delete("/students/:studentId", async (req, res) => {
     }
 });
 
-// ✅ Add a new answer sheet
+// ✅ Add answer sheet
 app.post('/answer-sheets', async (req, res) => {
     try {
-        const { examTitle, subject, gradeLevel, questions } = req.body;
+        const { examTitle, subject, gradeLevel, questions, teacher_id } = req.body;
+        if (!teacher_id) return res.status(400).json({ error: "Missing teacher_id" });
 
-        // Save to database (assuming you have an "answer_sheets" table)
         const [result] = await db.execute(
-            "INSERT INTO answer_sheets (exam_title, subject, grade_level, questions) VALUES (?, ?, ?, ?)",
-            [examTitle, subject, gradeLevel, JSON.stringify(questions)]
+            "INSERT INTO answer_sheets (exam_title, subject, grade_level, questions, teacher_id) VALUES (?, ?, ?, ?, ?)",
+            [examTitle, subject, gradeLevel, JSON.stringify(questions), teacher_id]
         );
 
-        res.status(201).json({ message: "Answer sheet saved successfully!", id: result.insertId });
+        res.status(201).json({ message: "✅ Answer sheet saved!", id: result.insertId });
     } catch (error) {
         console.error('❌ Error saving answer sheet:', error);
         res.status(500).json({ error: "Failed to save answer sheet" });
     }
 });
 
-// ✅ Fetch all answer sheets
+// ✅ Get answer sheets for a specific user
 app.get('/answer-sheets', async (req, res) => {
+    const userId = req.query.userId;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+
     try {
-        const [rows] = await db.query('SELECT * FROM answer_sheets'); // Change pool to db
+        const [rows] = await db.query('SELECT * FROM answer_sheets WHERE teacher_id = ?', [userId]);
         res.json(rows);
     } catch (error) {
         console.error('❌ Error fetching answer sheets:', error);
         res.status(500).json({ message: 'Error fetching answer sheets' });
     }
 });
-const bcrypt = require("bcrypt"); // You need to install this if not yet
-const jwt = require("jsonwebtoken"); // Optional for JWT auth
-
-// ✅ Register User
-app.post("/register", async (req, res) => {
-    const { email, password, name } = req.body;
-
-    console.log("📥 Register request body:", req.body);
-
-    if (!email || !password || !name) {
-        console.log("❌ Missing fields.");
-        return res.status(400).json({ message: "Missing required fields." });
-    }
-
-    try {
-        const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-        if (existing.length > 0) {
-            console.log("⚠️ Email already exists.");
-            return res.status(409).json({ message: "Email already registered." });
-        }
-
-        const [result] = await db.query(
-            "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
-            [email, password, name]
-        );
-
-        console.log("✅ User registered:", result);
-        return res.status(201).json({ message: "User registered successfully." });
-
-    } catch (err) {
-        console.error("❌ Server error during registration:", err);
-        return res.status(500).json({ message: "Server error during registration." });
-    }
-});
-
-
-// ✅ Login User
-
-app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-        return res.status(400).json({ message: 'Missing email or password' });
-    }
-
-    try {
-        const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-
-        if (rows.length === 0) {
-            return res.status(401).json({ message: 'Invalid email or password' });
-        }
-
-        const user = rows[0];
-
-        // For simplicity, we just compare raw passwords (in real apps use bcrypt)
-        if (user.password !== password) {
-            return res.status(401).json({ message: 'Invalid email or password' });
-        }
-
-        res.json({ message: 'Login successful', user });
-    } catch (error) {
-        console.error('❌ Login error:', error.message);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-
 
 // ✅ Start the Server
 app.listen(PORT, "0.0.0.0", () => {

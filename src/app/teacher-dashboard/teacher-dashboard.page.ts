@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { IonicModule } from '@ionic/angular'; // Import IonicModule
 import { NavController } from '@ionic/angular';
+import { Subscription } from 'rxjs';
+import { Platform } from '@ionic/angular';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-teacher-dashboard',
@@ -9,8 +12,26 @@ import { NavController } from '@ionic/angular';
   standalone: true,
   imports: [IonicModule] // Ensure this is here
 })
+
 export class TeacherDashboardPage {
-  constructor(private navCtrl: NavController) {}
+  backButtonSub!: Subscription;
+
+  constructor(private router: Router, private navCtrl: NavController, private platform: Platform) {}
+
+  ionViewDidEnter() {
+    this.backButtonSub = this.platform.backButton.subscribeWithPriority(10, () => {
+      // Do nothing — this blocks the default back navigation
+    });
+  }
+
+  ionViewWillLeave() {
+    this.backButtonSub.unsubscribe(); // Clean up when leaving the page
+  }
+
+  logout() {
+    localStorage.removeItem('user');
+    this.router.navigateByUrl('/home', { replaceUrl: true });
+  }
 
   goToStudents() {
     this.navCtrl.navigateForward('/students');
