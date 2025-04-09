@@ -1,200 +1,189 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { IonicModule } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
+import { IonicModule } from '@ionic/angular';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-students',
   templateUrl: './students.page.html',
   styleUrls: ['./students.page.scss'],
   standalone: true,
-  imports: [CommonModule, FormsModule, IonicModule, HttpClientModule]
+  imports: [CommonModule, FormsModule, IonicModule]
 })
-export class StudentsPage {
+export class StudentsPage implements OnInit {
+  className: string = ''; // Declare the property
+
   BASE_URL = 'https://examscannerbackend-production.up.railway.app';
-
-
+  teacherId: any; // ✅ changed from userId to teacherId
   classes: any[] = [];
-  selectedClass: any = null;
-  newClassName: string = '';  
-  newStudentName: string = '';
-  selectedGradeLevel: string = ''; 
-  gradeLevels: string[] = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']; 
-
-  isEditingClass: any = {}; 
-  isEditingStudent: any = {}; 
-  editedClassName: any = {}; 
-  editedStudentData: any = {}; 
-
-  constructor(private http: HttpClient) {
-    this.fetchClasses();
-  }
-
-  // ✅ Fetch all classes with students
-  fetchClasses() {
-    console.log("🔄 Fetching classes from:", `${this.BASE_URL}/classes`);
+  selectedClass: any;
+  newClass: { name: string; teacher_id: number } = { name: '', teacher_id: 0 };
+  newStudent: { name: string; grade_level: string } = { name: '', grade_level: '' };
   
-    this.http.get<any[]>(`${this.BASE_URL}/classes`).subscribe(
-      (response) => {
-        this.classes = response;
-        console.log("✅ Classes fetched successfully:", this.classes);
-      },
-      (error) => {
-        console.error("❌ Error fetching classes:", error);
-        alert(`Failed to load classes. Error: ${error.message}`);
-      }
-    );
+  selectedGradeLevel: string = '';
+  gradeLevels: string[] = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+
+  isEditingClass: { [key: string]: boolean } = {};
+  editedClassName: { [key: string]: string } = {};
+
+  isEditingStudent: { [key: string]: boolean } = {};
+  editedStudentData: { [key: string]: any } = {};
+
+  constructor(private http: HttpClient, private authService: AuthService) {}
+
+  ngOnInit() {
+    const userData = localStorage.getItem('userData');
+    if (userData) {
+      const user = JSON.parse(userData);
+      this.teacherId = user.id; // Set teacher ID
+      console.log('Teacher ID from localStorage:', this.teacherId); // Log to check
+      this.newClass.teacher_id = this.teacherId;
+      this.fetchClasses();
+    }
   }
   
-
-  // ✅ Select a class
   selectClass(classItem: any) {
-    this.selectedClass = classItem;
+    this.selectedClass = classItem;  // Set the selected class when clicked
+    console.log('Selected class:', this.selectedClass);
   }
 
-  // ✅ Add a new class
+  fetchClasses() {
+    this.http.get<any[]>(`${this.BASE_URL}/classes?teacher_id=${this.teacherId}`).subscribe({
+      next: (data) => {
+        this.classes = data;
+      },
+      error: (err) => {
+        console.error('Error fetching classes:', err);
+        alert('Failed to load classes.');
+      }
+    });
+  }
+
   addClass() {
-    if (!this.newClassName.trim()) {
-      alert("Please enter a class name.");
+    if (!this.className.trim() || !this.teacherId) {
+      alert('Invalid data. Please ensure all fields are filled.');
       return;
     }
 
-    const newClass = { name: this.newClassName, teacher_id: 1 };
+    const newClass = {
+      name: this.className.trim(),
+      teacher_id: this.teacherId
+    };
 
-    this.http.post(`${this.BASE_URL}/classes`, newClass).subscribe(
-      response => {
-        console.log("✅ Class added:", response);
-        alert("Class added successfully!");
-        this.newClassName = ''; 
-        this.fetchClasses();
-      },
-      error => {
-        console.error("❌ Error adding class:", error);
-        alert("Failed to add class.");
-      }
-    );
+    console.log('New Class Data:', newClass);  // Log to verify class data
+    this.http.post(`${this.BASE_URL}/classes`, newClass)
+      .subscribe({
+        next: (res) => {
+          console.log('✅ Class added', res);
+          this.className = '';  // Clear the class name after success
+          this.fetchClasses(); // refresh class list
+        },
+        error: (err) => {
+          console.error('❌ Failed to add class:', err);
+          alert('Failed to add class');
+        }
+      });
   }
 
-  // ✅ Start Editing Class
+  fetchStudents(classId: number) {
+    // Ensure you use the correct API endpoint with the teacher's ID
+    this.http.get<any[]>(`${this.BASE_URL}/students?classId=${classId}&teacherId=${this.teacherId}`).subscribe({
+      next: (data) => {
+        this.selectedClass.students = data;
+        console.log('Students fetched:', data); // Log the students
+      },
+      error: (err) => {
+        console.error('Error fetching students:', err);
+        alert('Failed to load students.');
+      }
+    });
+  }
+
+  addStudent() {
+    if (!this.newStudent.name.trim() || !this.selectedGradeLevel || !this.selectedClass) {
+      alert('Invalid data. Please ensure all fields are filled.');
+      return;
+    }
+
+    const newStudentData = {
+      name: this.newStudent.name.trim(),
+      grade_level: this.selectedGradeLevel,
+      class_id: this.selectedClass.id,
+      teacher_id: this.teacherId // ✅ updated from user_id to teacher_id
+    };
+
+    this.http.post(`${this.BASE_URL}/students`, newStudentData).subscribe({
+      next: () => {
+        this.newStudent.name = ''; // Clear name after adding
+        this.selectedGradeLevel = ''; // Clear grade level after adding
+        this.fetchStudents(this.selectedClass.id);
+      },
+      error: (err) => {
+        console.error('Error adding student:', err);
+        alert('Failed to add student.');
+      }
+    });
+  }
+
   startEditingClass(classItem: any) {
     this.isEditingClass[classItem.id] = true;
     this.editedClassName[classItem.id] = classItem.name;
   }
 
-  // ✅ Save Edited Class
   saveEditedClass(classItem: any) {
-    const updatedClass = { ...classItem, name: this.editedClassName[classItem.id] };
+    const updatedName = this.editedClassName[classItem.id];
 
-    this.http.put(`${this.BASE_URL}/classes/${classItem.id}`, updatedClass)
-      .subscribe(
-        response => {
-          console.log("✅ Class updated successfully:", response);
-          alert("Class updated successfully!");
-          this.isEditingClass[classItem.id] = false;
-          this.fetchClasses();
-        },
-        error => {
-          console.error("❌ Error updating class:", error);
-          alert("Failed to update class.");
-        }
-      );
+    this.http.put(`${this.BASE_URL}/classes/${classItem.id}`, {
+      name: updatedName,
+      teacher_id: this.teacherId // ✅ updated key
+    }).subscribe(() => {
+      classItem.name = updatedName;
+      this.cancelEditClass(classItem);
+    });
   }
 
-  // ✅ Cancel Class Edit
   cancelEditClass(classItem: any) {
     this.isEditingClass[classItem.id] = false;
+    this.editedClassName[classItem.id] = '';
   }
 
-  // ✅ Delete a class
   deleteClass(classItem: any) {
-    if (confirm(`Are you sure you want to delete class: ${classItem.name}?`)) {
-      this.http.delete(`${this.BASE_URL}/classes/${classItem.id}`).subscribe(
-        response => {
-          console.log("✅ Class deleted:", response);
-          alert("Class deleted successfully!");
-          this.selectedClass = null;
-          this.fetchClasses();
-        },
-        error => {
-          console.error("❌ Error deleting class:", error);
-          alert("Failed to delete class.");
-        }
-      );
-    }
-  }
-
-  // ✅ Add a student
-  addStudent() {
-    if (!this.newStudentName.trim() || !this.selectedClass || !this.selectedGradeLevel) {
-      alert("Please enter a student name, grade level, and select a class.");
-      return;
-    }
-
-    const newStudent = {
-      name: this.newStudentName,
-      grade_level: this.selectedGradeLevel,
-      class_id: this.selectedClass.id
-    };
-
-    this.http.post(`${this.BASE_URL}/students`, newStudent).subscribe(
-      response => {
-        console.log("✅ Student added:", response);
-        alert("Student added successfully!");
-        this.newStudentName = ''; 
-        this.selectedGradeLevel = ''; 
-        this.fetchClasses();
-      },
-      error => {
-        console.error("❌ Error adding student:", error);
-        alert("Failed to add student.");
+    this.http.delete(`${this.BASE_URL}/classes/${classItem.id}`).subscribe(() => {
+      this.classes = this.classes.filter(c => c.id !== classItem.id);
+      if (this.selectedClass?.id === classItem.id) {
+        this.selectedClass = null;
       }
-    );
+    });
   }
 
-  // ✅ Start Editing Student
   startEditingStudent(student: any) {
     this.isEditingStudent[student.id] = true;
-    this.editedStudentData[student.id] = { ...student }; // Make a copy
+    this.editedStudentData[student.id] = {
+      name: student.name,
+      grade_level: student.grade_level
+    };
   }
 
-  // ✅ Save Edited Student
   saveEditedStudent(student: any) {
-    this.http.put(`${this.BASE_URL}/students/${student.id}`, this.editedStudentData[student.id])
-      .subscribe(
-        response => {
-          console.log("✅ Student updated successfully:", response);
-          alert("Student updated successfully!");
-          this.isEditingStudent[student.id] = false;
-          this.fetchClasses();
-        },
-        error => {
-          console.error("❌ Error updating student:", error);
-          alert("Failed to update student.");
-        }
-      );
+    const updatedStudent = this.editedStudentData[student.id];
+
+    this.http.put(`${this.BASE_URL}/students/${student.id}`, updatedStudent).subscribe(() => {
+      student.name = updatedStudent.name;
+      student.grade_level = updatedStudent.grade_level;
+      this.cancelEditStudent(student);
+    });
   }
 
-  // ✅ Cancel Student Edit
   cancelEditStudent(student: any) {
     this.isEditingStudent[student.id] = false;
+    delete this.editedStudentData[student.id];
   }
 
-  // ✅ Delete a student
   deleteStudent(student: any) {
-    if (confirm(`Are you sure you want to delete student: ${student.name}?`)) {
-      this.http.delete(`${this.BASE_URL}/students/${student.id}`).subscribe(
-        response => {
-          console.log("✅ Student deleted:", response);
-          alert("Student deleted successfully!");
-          this.fetchClasses();
-        },
-        error => {
-          console.error("❌ Error deleting student:", error);
-          alert("Failed to delete student.");
-        }
-      );
-    }
+    this.http.delete(`${this.BASE_URL}/students/${student.id}`).subscribe(() => {
+      this.selectedClass.students = this.selectedClass.students.filter((s: any) => s.id !== student.id);
+    });
   }
 }

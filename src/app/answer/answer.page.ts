@@ -2,7 +2,9 @@ import { Component, ElementRef, ViewChild } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { AuthService } from '../services/auth.service'; // Adjust based on your actual file structure
+import { Router } from '@angular/router';
 
 declare var cv: any; // Declare cv to avoid TypeScript errors
 
@@ -28,10 +30,21 @@ export class AnswerPage {
   @ViewChild('canvas') canvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
-  constructor(private http: HttpClient) {}
+  loggedInTeacher: any;
+  
+  constructor(
+    private http: HttpClient, 
+    private authService: AuthService, 
+    private router: Router
+  ) {}
 
   ngOnInit() {
-    this.getAnswerSheets(); // Fetch answer sheets when the page loads
+    this.loggedInTeacher = JSON.parse(localStorage.getItem('teacher') || '{}');
+    
+    if (!this.loggedInTeacher || !this.loggedInTeacher.id) {
+      // If no teacher data or ID is available, navigate to login
+      this.router.navigate(['/home']);
+    }
   }
 
   // Generate answer input fields when number of questions is entered
@@ -44,11 +57,18 @@ export class AnswerPage {
 
   // Save the answer sheet to the database
   saveAnswerSheet() {
+    // Check if logged-in teacher exists in localStorage
+    if (!this.loggedInTeacher || !this.loggedInTeacher.id) {
+      alert('Teacher not logged in.');
+      return;
+    }
+
     const answerSheetData = {
       examTitle: this.examTitle,
       subject: this.subject,
       gradeLevel: this.gradeLevel,
-      questions: this.questions
+      questions: this.questions,
+      teacher_id: this.loggedInTeacher.id  // Use the teacher_id from the logged-in teacher
     };
 
     this.http.post(`${this.BASE_URL}/answer-sheets`, answerSheetData).subscribe(
@@ -66,7 +86,13 @@ export class AnswerPage {
 
   // Fetch saved answer sheets from the server
   getAnswerSheets() {
-    this.http.get(`${this.BASE_URL}/answer-sheets`).subscribe(
+    // Check if logged-in teacher exists in localStorage
+    if (!this.loggedInTeacher || !this.loggedInTeacher.id) {
+      alert('Teacher not logged in.');
+      return;
+    }
+
+    this.http.get(`${this.BASE_URL}/answer-sheets?teacher_id=${this.loggedInTeacher.id}`).subscribe(
       (response: any) => {
         console.log("✅ Fetched answer sheets:", response);
         this.answerSheets = response;

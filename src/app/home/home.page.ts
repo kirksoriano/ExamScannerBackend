@@ -1,10 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AlertController, LoadingController } from '@ionic/angular';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-home',
@@ -13,7 +14,7 @@ import { AlertController, LoadingController } from '@ionic/angular';
   standalone: true,
   imports: [CommonModule, IonicModule, FormsModule]
 })
-export class HomePage {
+export class HomePage implements OnInit {
   loginEmail = '';
   loginPassword = '';
   registerEmail = '';
@@ -25,8 +26,16 @@ export class HomePage {
     private http: HttpClient,
     private router: Router,
     private alertCtrl: AlertController,
-    private loadingCtrl: LoadingController
+    private loadingCtrl: LoadingController,
+    private authservice: AuthService,
   ) {}
+
+  ngOnInit() {
+    // Check if the user is already logged in when the page loads
+    if (this.authservice.isLoggedIn()) {
+      this.router.navigate(['/teacher-dashboard']);
+    }
+  }
 
   async login() {
     const loading = await this.loadingCtrl.create({
@@ -40,7 +49,9 @@ export class HomePage {
     }).subscribe(
       async (res) => {
         await loading.dismiss();
-        localStorage.setItem('user', JSON.stringify(res.user));
+        // Save the JWT token in localStorage
+        localStorage.setItem('token', res.token);  // Store JWT token
+        this.authservice.setUserId(res.user.id);  // Store user ID in AuthService
         this.router.navigate(['/teacher-dashboard']);
       },
       async (err) => {

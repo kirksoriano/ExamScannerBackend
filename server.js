@@ -47,8 +47,15 @@ app.post("/register", async (req, res) => {
             "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
             [email, password, name]
         );
-
-        return res.status(201).json({ message: "User registered successfully." });
+        
+        return res.status(201).json({
+            message: "User registered successfully.",
+            user: {
+                id: result.insertId,
+                email,
+                name
+            }
+        });
     } catch (err) {
         console.error("❌ Registration error:", err);
         return res.status(500).json({ message: "Server error during registration." });
@@ -66,12 +73,20 @@ app.post('/login', async (req, res) => {
     try {
         const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
 
-        if (rows.length === 0 || rows[0].password !== password) {
+        if (rows.length === 0 || !bcrypt.compareSync(password, rows[0].password)) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
         const user = rows[0];
-        res.json({ message: 'Login successful', user });
+        res.json({
+            message: 'Login successful',
+            user: {
+                id: user.id, // This is your teacher_id
+                name: user.name,
+                email: user.email
+            }
+        });
+        
     } catch (error) {
         console.error('❌ Login error:', error.message);
         res.status(500).json({ message: 'Internal server error' });
@@ -79,40 +94,32 @@ app.post('/login', async (req, res) => {
 });
 
 // ✅ Fetch all classes for a specific user
-app.get("/classes", async (req, res) => {
-    const userId = req.query.userId;
-    if (!userId) return res.status(400).json({ error: "Missing userId" });
-
-    try {
-        const [classes] = await db.query("SELECT * FROM classes WHERE teacher_id = ?", [userId]);
-
-        for (const classItem of classes) {
-            const [students] = await db.query("SELECT * FROM students WHERE class_id = ?", [classItem.id]);
-            classItem.students = students;
-        }
-
-        res.json(classes);
-    } catch (error) {
-        console.error("❌ Error fetching classes:", error.message);
-        res.status(500).json({ error: "Database error." });
-    }
-});
+app.get('/classes/:teacher_id', async (req, res) => {
+    const teacherId = req.params.teacher_id;
+    const [rows] = await db.execute('SELECT * FROM classes WHERE teacher_id = ?', [teacherId]);
+    res.json(rows);
+  });
+  
 
 // ✅ Add a new class
-app.post("/classes", async (req, res) => {
+app.post('/classes', async (req, res) => {
     const { name, teacher_id } = req.body;
+  
     if (!name || !teacher_id) {
-        return res.status(400).json({ error: "Missing class name or teacher ID." });
+      return res.status(400).json({ error: 'Class name and teacher ID are required.' });
     }
-
+  
     try {
-        const [result] = await db.query("INSERT INTO classes (name, teacher_id) VALUES (?, ?)", [name, teacher_id]);
-        res.status(201).json({ message: "✅ Class added successfully.", class: { id: result.insertId, name, teacher_id } });
-    } catch (error) {
-        console.error("❌ Error adding class:", error.message);
-        res.status(500).json({ error: "Database error while adding class." });
+      const [result] = await db.execute(
+        'INSERT INTO classes (name, teacher_id) VALUES (?, ?)',
+        [name, teacher_id]
+      );
+      res.json({ id: result.insertId, name, teacher_id });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to create class.' });
     }
-});
+  });
+  
 
 // ✅ Update a class
 app.put("/classes/:id", async (req, res) => {
@@ -235,22 +242,24 @@ app.delete("/students/:studentId", async (req, res) => {
 });
 
 // ✅ Add answer sheet
-app.post('/answer-sheets', async (req, res) => {
-    try {
-        const { examTitle, subject, gradeLevel, questions, teacher_id } = req.body;
-        if (!teacher_id) return res.status(400).json({ error: "Missing teacher_id" });
-
-        const [result] = await db.execute(
-            "INSERT INTO answer_sheets (exam_title, subject, grade_level, questions, teacher_id) VALUES (?, ?, ?, ?, ?)",
-            [examTitle, subject, gradeLevel, JSON.stringify(questions), teacher_id]
-        );
-
-        res.status(201).json({ message: "✅ Answer sheet saved!", id: result.insertId });
-    } catch (error) {
-        console.error('❌ Error saving answer sheet:', error);
-        res.status(500).json({ error: "Failed to save answer sheet" });
+app.post('/answer-sheets', (req, res) => {
+    const { teacher_id, answerSheet } = req.body;
+  
+    if (!teacher_id) {
+      return res.status(400).json({ error: 'Missing teacher_id' });
     }
-});
+  
+    // Proceed with saving the answer sheet and associating it with the teacher
+    const newAnswerSheet = new AnswerSheet({
+      teacher_id: teacher_id,  // Save with teacher_id
+      answers: answerSheet,    // Assuming answerSheet holds the answers
+    });
+  
+    newAnswerSheet.save()
+      .then(() => res.status(200).json({ message: 'Answer sheet saved successfully' }))
+      .catch((err) => res.status(500).json({ error: 'Error saving answer sheet', message: err.message }));
+  });
+  
 
 // ✅ Get answer sheets for a specific user
 app.get('/answer-sheets', async (req, res) => {

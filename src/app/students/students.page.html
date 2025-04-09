@@ -10,7 +10,7 @@
 <ion-content class="ion-padding">
   <!-- Add New Class -->
   <ion-item>
-    <ion-input [(ngModel)]="newClassName" placeholder="Enter class name"></ion-input>
+    <ion-input [(ngModel)]="newClass.name" placeholder="Enter class name"></ion-input>
     <ion-button expand="full" (click)="addClass()">Add Class</ion-button>
   </ion-item>
 
@@ -26,7 +26,7 @@
 
       <!-- View Mode for Class -->
       <ng-template #viewClass>
-        <span (click)="selectClass(classItem)">{{ classItem.name }}</span>
+        <span (click)="selectedClass(classItem)">{{ classItem.name }}</span>
         <ion-button fill="outline" color="primary" (click)="startEditingClass(classItem)">Edit</ion-button>
         <ion-button fill="outline" color="danger" (click)="deleteClass(classItem)">Delete</ion-button>
       </ng-template>
@@ -39,8 +39,8 @@
 
     <!-- Add New Student -->
     <ion-item>
-      <ion-input [(ngModel)]="newStudentName" placeholder="Enter student name"></ion-input>
-      <ion-select [(ngModel)]="selectedGradeLevel" placeholder="Select grade level">
+      <ion-input [(ngModel)]="newStudent.name" placeholder="Enter student name"></ion-input>
+      <ion-select [(ngModel)]="newStudent.grade_level" placeholder="Select grade level">
         <ion-select-option *ngFor="let grade of gradeLevels" [value]="grade">{{ grade }}</ion-select-option>
       </ion-select>
       <ion-button expand="full" (click)="addStudent()">Add Student</ion-button>
