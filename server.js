@@ -14,8 +14,10 @@ if (!process.env.DATABASE_URL) {
     process.exit(1);
 }
 
+// Set up MySQL connection pool using Railway's MySQL database URL
 const db = mysql.createPool(process.env.DATABASE_URL);
 
+// Check DB Connection
 (async () => {
     try {
         const connection = await db.getConnection();
@@ -27,7 +29,13 @@ const db = mysql.createPool(process.env.DATABASE_URL);
     }
 })();
 
-app.use(cors());
+// Configure CORS
+app.use(cors({
+    origin: process.env.FRONTEND_URL || '*',  // Replace with your frontend URL if needed
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // ✅ Register User
@@ -43,9 +51,11 @@ app.post("/register", async (req, res) => {
             return res.status(409).json({ message: "Email already registered." });
         }
 
+        // Hash the password before saving
+        const hashedPassword = await bcrypt.hash(password, 10);
         const [result] = await db.query(
             "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
-            [email, password, name]
+            [email, hashedPassword, name]
         );
         
         return res.status(201).json({
@@ -73,18 +83,22 @@ app.post('/login', async (req, res) => {
     try {
         const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
 
-        if (rows.length === 0 || !bcrypt.compareSync(password, rows[0].password)) {
+        if (rows.length === 0 || !await bcrypt.compare(password, rows[0].password)) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
         const user = rows[0];
+        // Create a JWT token
+        const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
         res.json({
             message: 'Login successful',
             user: {
-                id: user.id, // This is your teacher_id
+                id: user.id,  // This is your teacher_id
                 name: user.name,
                 email: user.email
-            }
+            },
+            token  // Send the token to the frontend
         });
         
     } catch (error) {
@@ -93,13 +107,28 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// ✅ Fetch all classes for a specific user
+// Endpoint to verify the JWT token (example usage in protected routes)
+app.post('/verify-token', (req, res) => {
+    const token = req.headers['authorization'];
+
+    if (!token) {
+        return res.status(403).json({ message: 'Token is required' });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: 'Invalid token' });
+        }
+        res.json({ message: 'Token valid', user: decoded });
+    });
+});
+
+// ✅ Fetch all classes for a specific teacher
 app.get('/classes/:teacher_id', async (req, res) => {
     const teacherId = req.params.teacher_id;
     const [rows] = await db.execute('SELECT * FROM classes WHERE teacher_id = ?', [teacherId]);
     res.json(rows);
-  });
-  
+});
 
 // ✅ Add a new class
 app.post('/classes', async (req, res) => {
@@ -118,8 +147,7 @@ app.post('/classes', async (req, res) => {
     } catch (err) {
       res.status(500).json({ error: 'Failed to create class.' });
     }
-  });
-  
+});
 
 // ✅ Update a class
 app.put("/classes/:id", async (req, res) => {
@@ -242,35 +270,38 @@ app.delete("/students/:studentId", async (req, res) => {
 });
 
 // ✅ Add answer sheet
-app.post('/answer-sheets', (req, res) => {
+app.post('/answer-sheets', async (req, res) => {
     const { teacher_id, answerSheet } = req.body;
-  
-    if (!teacher_id) {
-      return res.status(400).json({ error: 'Missing teacher_id' });
-    }
-  
-    // Proceed with saving the answer sheet and associating it with the teacher
-    const newAnswerSheet = new AnswerSheet({
-      teacher_id: teacher_id,  // Save with teacher_id
-      answers: answerSheet,    // Assuming answerSheet holds the answers
-    });
-  
-    newAnswerSheet.save()
-      .then(() => res.status(200).json({ message: 'Answer sheet saved successfully' }))
-      .catch((err) => res.status(500).json({ error: 'Error saving answer sheet', message: err.message }));
-  });
-  
 
-// ✅ Get answer sheets for a specific user
-app.get('/answer-sheets', async (req, res) => {
-    const userId = req.query.userId;
-    if (!userId) return res.status(400).json({ error: "Missing userId" });
+    if (!teacher_id || !answerSheet) {
+        return res.status(400).json({ error: 'Missing teacher_id or answer sheet data.' });
+    }
 
     try {
-        const [rows] = await db.query('SELECT * FROM answer_sheets WHERE teacher_id = ?', [userId]);
+        const [result] = await db.query(
+            'INSERT INTO answer_sheets (teacher_id, answers) VALUES (?, ?)',
+            [teacher_id, JSON.stringify(answerSheet)]
+        );
+        res.status(200).json({ message: 'Answer sheet saved successfully.' });
+    } catch (err) {
+        console.error('❌ Error saving answer sheet:', err.message);
+        res.status(500).json({ error: 'Error saving answer sheet', message: err.message });
+    }
+});
+
+// ✅ Get answer sheets for a specific teacher
+app.get('/answer-sheets', async (req, res) => {
+    const teacherId = req.query.teacherId;
+
+    if (!teacherId) {
+        return res.status(400).json({ error: 'Missing teacherId' });
+    }
+
+    try {
+        const [rows] = await db.query('SELECT * FROM answer_sheets WHERE teacher_id = ?', [teacherId]);
         res.json(rows);
     } catch (error) {
-        console.error('❌ Error fetching answer sheets:', error);
+        console.error('❌ Error fetching answer sheets:', error.message);
         res.status(500).json({ message: 'Error fetching answer sheets' });
     }
 });

@@ -42,17 +42,25 @@ export class HomePage implements OnInit {
       message: 'Logging in...',
     });
     await loading.present();
-
+  
     this.http.post<any>('https://examscannerbackend-production.up.railway.app/login', {
       email: this.loginEmail,
       password: this.loginPassword,
     }).subscribe(
       async (res) => {
         await loading.dismiss();
-        // Save the JWT token in localStorage
-        localStorage.setItem('token', res.token);  // Store JWT token
-        this.authservice.setUserId(res.user.id);  // Store user ID in AuthService
-        this.router.navigate(['/teacher-dashboard']);
+        if (res.token) {  // Check if token is received
+          localStorage.setItem('auth_token', res.token);  // Store the token in local storage
+          this.authservice.setUserId(res.user.id);  // Store the user ID in AuthService
+          this.router.navigate(['/teacher-dashboard']);
+        } else {
+          const alert = await this.alertCtrl.create({
+            header: 'Login Failed',
+            message: 'Token not found in response.',
+            buttons: ['OK'],
+          });
+          await alert.present();
+        }
       },
       async (err) => {
         await loading.dismiss();
@@ -65,6 +73,8 @@ export class HomePage implements OnInit {
       }
     );
   }
+  
+  
 
   async register() {
     const loading = await this.loadingCtrl.create({
