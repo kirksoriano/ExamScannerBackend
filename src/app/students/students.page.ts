@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, NavController } from '@ionic/angular';
 import { AuthService } from '../services/auth.service';
 
 @Component({
@@ -13,15 +13,14 @@ import { AuthService } from '../services/auth.service';
   imports: [CommonModule, FormsModule, IonicModule]
 })
 export class StudentsPage implements OnInit {
-  className: string = ''; // Declare the property
-
+  className: string = '';
   BASE_URL = 'https://examscannerbackend-production.up.railway.app';
-  teacherId: any; // ✅ changed from userId to teacherId
+  teacherId: any;
+
   classes: any[] = [];
   selectedClass: any;
   newClass: { name: string; teacher_id: number } = { name: '', teacher_id: 0 };
   newStudent: { name: string; grade_level: string } = { name: '', grade_level: '' };
-  
   selectedGradeLevel: string = '';
   gradeLevels: string[] = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
 
@@ -31,25 +30,36 @@ export class StudentsPage implements OnInit {
   isEditingStudent: { [key: string]: boolean } = {};
   editedStudentData: { [key: string]: any } = {};
 
-  constructor(private http: HttpClient, private authService: AuthService) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+    private navCtrl: NavController
+  ) {}
 
   ngOnInit() {
     const userData = localStorage.getItem('userData');
-    if (userData) {
-      const user = JSON.parse(userData);
-      this.teacherId = user.id; // Set teacher ID
-      console.log('Teacher ID from localStorage:', this.teacherId); // Log to check
-      this.newClass.teacher_id = this.teacherId;
-      this.fetchClasses();
+    if (!userData) {
+      this.navCtrl.navigateRoot('/home');
+      return;
     }
+
+    const user = JSON.parse(userData);
+    this.teacherId = user.id;
+    this.newClass.teacher_id = this.teacherId;
+
+    console.log('✅ Teacher ID loaded:', this.teacherId);
+
+    this.fetchClasses();
   }
-  
+
   selectClass(classItem: any) {
-    this.selectedClass = classItem;  // Set the selected class when clicked
+    this.selectedClass = classItem;
     console.log('Selected class:', this.selectedClass);
   }
 
   fetchClasses() {
+    if (!this.teacherId) return;
+
     this.http.get<any[]>(`${this.BASE_URL}/classes?teacher_id=${this.teacherId}`).subscribe({
       next: (data) => {
         this.classes = data;
@@ -62,37 +72,38 @@ export class StudentsPage implements OnInit {
   }
 
   addClass() {
-    if (!this.className.trim() || !this.teacherId) {
-      alert('Invalid data. Please ensure all fields are filled.');
+    if (!this.className.trim()) {
+      alert('Class name is required.');
       return;
     }
 
-    const newClass = {
+    const newClassData = {
       name: this.className.trim(),
       teacher_id: this.teacherId
     };
 
-    console.log('New Class Data:', newClass);  // Log to verify class data
-    this.http.post(`${this.BASE_URL}/classes`, newClass)
-      .subscribe({
-        next: (res) => {
-          console.log('✅ Class added', res);
-          this.className = '';  // Clear the class name after success
-          this.fetchClasses(); // refresh class list
-        },
-        error: (err) => {
-          console.error('❌ Failed to add class:', err);
-          alert('Failed to add class');
-        }
-      });
+    console.log('Submitting new class:', newClassData);
+
+    this.http.post(`${this.BASE_URL}/classes`, newClassData).subscribe({
+      next: (res) => {
+        console.log('✅ Class added:', res);
+        this.className = '';
+        this.fetchClasses();
+      },
+      error: (err) => {
+        console.error('❌ Failed to add class:', err);
+        alert('Failed to add class.');
+      }
+    });
   }
 
   fetchStudents(classId: number) {
-    // Ensure you use the correct API endpoint with the teacher's ID
+    if (!classId || !this.teacherId) return;
+
     this.http.get<any[]>(`${this.BASE_URL}/students?classId=${classId}&teacherId=${this.teacherId}`).subscribe({
       next: (data) => {
         this.selectedClass.students = data;
-        console.log('Students fetched:', data); // Log the students
+        console.log('Students fetched:', data);
       },
       error: (err) => {
         console.error('Error fetching students:', err);
@@ -111,13 +122,13 @@ export class StudentsPage implements OnInit {
       name: this.newStudent.name.trim(),
       grade_level: this.selectedGradeLevel,
       class_id: this.selectedClass.id,
-      teacher_id: this.teacherId // ✅ updated from user_id to teacher_id
+      teacher_id: this.teacherId
     };
 
     this.http.post(`${this.BASE_URL}/students`, newStudentData).subscribe({
       next: () => {
-        this.newStudent.name = ''; // Clear name after adding
-        this.selectedGradeLevel = ''; // Clear grade level after adding
+        this.newStudent.name = '';
+        this.selectedGradeLevel = '';
         this.fetchStudents(this.selectedClass.id);
       },
       error: (err) => {
@@ -137,7 +148,7 @@ export class StudentsPage implements OnInit {
 
     this.http.put(`${this.BASE_URL}/classes/${classItem.id}`, {
       name: updatedName,
-      teacher_id: this.teacherId // ✅ updated key
+      teacher_id: this.teacherId
     }).subscribe(() => {
       classItem.name = updatedName;
       this.cancelEditClass(classItem);

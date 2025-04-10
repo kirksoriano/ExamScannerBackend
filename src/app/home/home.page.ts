@@ -50,9 +50,9 @@ export class HomePage implements OnInit {
       async (res) => {
         await loading.dismiss();
         if (res.token) {  // Check if token is received
-          localStorage.setItem('auth_token', res.token);  // Store the token in local storage
-          this.authservice.setUserId(res.user.id);  // Store the user ID in AuthService
-          this.router.navigate(['/teacher-dashboard']);
+          this.authservice.setUserData(res.user); // Assuming backend returns { user, token }
+          localStorage.setItem('auth_token', res.token);
+          this.router.navigateByUrl('/teacher-dashboard', { replaceUrl: true });
         } else {
           const alert = await this.alertCtrl.create({
             header: 'Login Failed',
