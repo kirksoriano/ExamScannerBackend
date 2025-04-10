@@ -46,6 +46,7 @@ app.use(cors({
 app.use(express.json());
 
 // ✅ Register User
+// ✅ Register User
 app.post("/register", async (req, res) => {
     const { email, password, name } = req.body;
     if (!email || !password || !name) {
@@ -58,11 +59,10 @@ app.post("/register", async (req, res) => {
             return res.status(409).json({ message: "Email already registered." });
         }
 
-        // Hash the password before saving
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // Store password as plain text for now
         const [result] = await db.query(
             "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
-            [email, hashedPassword, name]
+            [email, password, name]
         );
         
         return res.status(201).json({
@@ -75,10 +75,12 @@ app.post("/register", async (req, res) => {
         });
     } catch (err) {
         console.error("❌ Registration error:", err);
-        res.status(500).json({ message: "Server error during registration." });
+        return res.status(500).json({ message: "Server error during registration." });
     }
 });
 
+
+// ✅ Login User
 // ✅ Login User
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
@@ -88,7 +90,6 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        // Fetch the user based on email
         const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
 
         if (rows.length === 0) {
@@ -97,10 +98,8 @@ app.post('/login', async (req, res) => {
 
         const user = rows[0];
         
-        // Compare the password (hashed password from DB and the entered password)
-        const passwordMatch = await bcrypt.compare(password, user.password);
-
-        if (!passwordMatch) {
+        // Compare the password directly (no bcrypt)
+        if (user.password !== password) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
@@ -122,6 +121,7 @@ app.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 
 
 

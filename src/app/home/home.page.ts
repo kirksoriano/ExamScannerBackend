@@ -51,7 +51,7 @@ export class HomePage implements OnInit {
         await loading.dismiss();
         if (res.token) {  // Check if token is received
           this.authservice.setUserData(res.user); // Assuming backend returns { user, token }
-          localStorage.setItem('auth_token', res.token);  // Store token in localStorage
+          localStorage.setItem('auth_token', res.token);
           this.router.navigateByUrl('/teacher-dashboard', { replaceUrl: true });
         } else {
           const alert = await this.alertCtrl.create({
@@ -72,9 +72,8 @@ export class HomePage implements OnInit {
         await alert.present();
       }
     );
-}
+  }
 
-  
   async register() {
     const loading = await this.loadingCtrl.create({
       message: 'Registering...',
@@ -88,22 +87,13 @@ export class HomePage implements OnInit {
     }).subscribe(
       async (res) => {
         await loading.dismiss();
-        if (res.status === 'success') {
-          const alert = await this.alertCtrl.create({
-            header: 'Success',
-            message: 'Registration successful. You can now log in.',
-            buttons: ['OK'],
-          });
-          await alert.present();
-          this.isRegistering = false;
-        } else {
-          const alert = await this.alertCtrl.create({
-            header: 'Registration Failed',
-            message: 'There was an issue with your registration.',
-            buttons: ['OK'],
-          });
-          await alert.present();
-        }
+        const alert = await this.alertCtrl.create({
+          header: 'Success',
+          message: 'Registration successful. You can now log in.',
+          buttons: ['OK'],
+        });
+        await alert.present();
+        this.isRegistering = false;
       },
       async (err) => {
         await loading.dismiss();
@@ -115,8 +105,7 @@ export class HomePage implements OnInit {
         await alert.present();
       }
     );
-}
-
+  }
 
   toggleMode() {
     this.isRegistering = !this.isRegistering;
