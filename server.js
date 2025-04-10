@@ -272,19 +272,20 @@ app.get('/answer-sheets', async (req, res) => {
   });
   
   
-  app.post('/answer-sheets', async (req, res) => {
-    const { examTitle, subject, gradeLevel, questions, teacher_id } = req.body;
+  // Save a new Answer Sheet
+app.post('/answer-sheets', async (req, res) => {
+    const { examTitle, subject, gradeLevel, questions, teacherId } = req.body;
   
-    console.log('Received request body:', req.body);  // Log the body here
-    
-    if (!teacher_id || !examTitle || !subject || !gradeLevel || !questions) {
+    console.log('Received request body:', req.body);
+  
+    if (!teacherId || !examTitle || !subject || !gradeLevel || !questions) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
   
     try {
       const [result] = await db.execute(
-        'INSERT INTO answer_sheets (examTitle, subject, gradeLevel, questions, teacher_id) VALUES (?, ?, ?, ?, ?)',
-        [examTitle, subject, gradeLevel, JSON.stringify(questions), teacher_id]
+        'INSERT INTO answer_sheets (exam_title, subject, grade_level, questions, teacher_id) VALUES (?, ?, ?, ?, ?)',
+        [examTitle, subject, gradeLevel, JSON.stringify(questions), teacherId]
       );
   
       res.json({ id: result.insertId, message: 'Answer sheet saved' });
@@ -295,34 +296,37 @@ app.get('/answer-sheets', async (req, res) => {
   });
   
   
+  // Edit an Answer Sheet
+  app.put('/answer-sheets/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, file_url } = req.body;
+  
+    try {
+      await db.query(
+        'UPDATE answer_sheets SET name = ?, file_url = ? WHERE id = ?',
+        [name, file_url, id]
+      );
+      res.status(200).send('Answer Sheet updated');
+    } catch (error) {
+      console.error('❌ Error updating answer sheet:', error);
+      res.status(500).send('Server error');
+    }
+  });
   
   
-
-// Edit an Answer Sheet
-app.put('/answer-sheets/:id', async (req, res) => {
-  const { id } = req.params;
-  const { name, file_url } = req.body;
-  try {
-    await db.query('UPDATE answer_sheets SET name = ?, file_url = ? WHERE id = ?', [name, file_url, id]);
-    res.status(200).send('Answer Sheet updated');
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-});
-
-// Delete an Answer Sheet
-app.delete('/answer-sheets/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    await db.query('DELETE FROM answer_sheets WHERE id = ?', [id]);
-    res.status(200).send('Answer Sheet deleted');
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-});
-
+  // Delete an Answer Sheet
+  app.delete('/answer-sheets/:id', async (req, res) => {
+    const { id } = req.params;
+  
+    try {
+      await db.query('DELETE FROM answer_sheets WHERE id = ?', [id]);
+      res.status(200).send('Answer Sheet deleted');
+    } catch (error) {
+      console.error('❌ Error deleting answer sheet:', error);
+      res.status(500).send('Server error');
+    }
+  });
+  
 app.get('/routes-check', (req, res) => {
     res.json({
       message: "Routes check",

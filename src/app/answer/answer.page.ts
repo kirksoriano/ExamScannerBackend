@@ -58,21 +58,21 @@ export class AnswerPage implements OnInit {
       answer: ''
     }));
   }
-
+  
   saveAnswerSheet() {
     if (!this.teacherId) {
       alert('Teacher not logged in.');
       return;
     }
-
+  
     const answerSheetData = {
-      examTitle: this.examTitle,
+      examTitle: this.examTitle,      // ✅ Use camelCase
       subject: this.subject,
-      gradeLevel: this.gradeLevel,
+      gradeLevel: this.gradeLevel,    // ✅ Use camelCase
       questions: this.questions,
-      teacher_id: this.teacherId
+      teacherId: this.teacherId       // ✅ Use camelCase
     };
-
+  
     this.http.post(`${this.BASE_URL}/answer-sheets`, answerSheetData).subscribe(
       response => {
         console.log('✅ Answer sheet saved:', response);
@@ -82,18 +82,18 @@ export class AnswerPage implements OnInit {
       },
       error => {
         console.error('❌ Error saving answer sheet:', error);
-        console.error('Error details:', error.error); // Log more details for better debugging
+        console.error('Error details:', error.error);
         alert('Failed to save answer sheet.');
       }
     );
-  }    
-
+  }
+  
   getAnswerSheets() {
     if (!this.teacherId) {
       alert('Teacher not logged in.');
       return;
     }
-
+  
     this.http.get(`${this.BASE_URL}/answer-sheets?teacher_id=${this.teacherId}`).subscribe(
       (response: any) => {
         console.log("✅ Fetched answer sheets:", response);
@@ -105,7 +105,7 @@ export class AnswerPage implements OnInit {
       }
     );
   }
-
+  
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
