@@ -51,12 +51,12 @@ export class HomePage implements OnInit {
         await loading.dismiss();
         if (res.token) {  // Check if token is received
           this.authservice.setUserData(res.user); // Assuming backend returns { user, token }
-          localStorage.setItem('auth_token', res.token);
+          localStorage.setItem('auth_token', res.token);  // Store token in localStorage
           this.router.navigateByUrl('/teacher-dashboard', { replaceUrl: true });
         } else {
           const alert = await this.alertCtrl.create({
             header: 'Login Failed',
-            message: 'Token not found in response. Please try again later.',
+            message: 'Token not found in response.',
             buttons: ['OK'],
           });
           await alert.present();
@@ -64,7 +64,6 @@ export class HomePage implements OnInit {
       },
       async (err) => {
         await loading.dismiss();
-        console.error('Login error:', err);  // Log full error to understand why it fails
         const alert = await this.alertCtrl.create({
           header: 'Login Failed',
           message: err.error.message || 'Invalid email or password.',
@@ -73,7 +72,8 @@ export class HomePage implements OnInit {
         await alert.present();
       }
     );
-  }
+}
+
   
   async register() {
     const loading = await this.loadingCtrl.create({
@@ -88,26 +88,35 @@ export class HomePage implements OnInit {
     }).subscribe(
       async (res) => {
         await loading.dismiss();
-        const alert = await this.alertCtrl.create({
-          header: 'Success',
-          message: 'Registration successful. You can now log in.',
-          buttons: ['OK'],
-        });
-        await alert.present();
-        this.isRegistering = false;
+        if (res.status === 'success') {
+          const alert = await this.alertCtrl.create({
+            header: 'Success',
+            message: 'Registration successful. You can now log in.',
+            buttons: ['OK'],
+          });
+          await alert.present();
+          this.isRegistering = false;
+        } else {
+          const alert = await this.alertCtrl.create({
+            header: 'Registration Failed',
+            message: 'There was an issue with your registration.',
+            buttons: ['OK'],
+          });
+          await alert.present();
+        }
       },
       async (err) => {
         await loading.dismiss();
-        console.error('Registration error:', err);  // Log full error for debugging
         const alert = await this.alertCtrl.create({
           header: 'Registration Failed',
-          message: err.error.message || 'Could not register. Please try again.',
+          message: err.error.message || 'Could not register.',
           buttons: ['OK'],
         });
         await alert.present();
       }
     );
-  }
+}
+
 
   toggleMode() {
     this.isRegistering = !this.isRegistering;

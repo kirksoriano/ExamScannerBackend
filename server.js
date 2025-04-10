@@ -88,17 +88,26 @@ app.post('/login', async (req, res) => {
     }
 
     try {
+        // Fetch the user based on email
         const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
 
-        if (rows.length === 0 || !await bcrypt.compare(password, rows[0].password)) {
+        if (rows.length === 0) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
         const user = rows[0];
-        // Create a JWT token
+        
+        // Compare the password (hashed password from DB and the entered password)
+        const passwordMatch = await bcrypt.compare(password, user.password);
+
+        if (!passwordMatch) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        // Create a JWT token if the password matches
         const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        res.status(200).json({
+        res.json({
             message: 'Login successful',
             user: {
                 id: user.id,
@@ -107,11 +116,13 @@ app.post('/login', async (req, res) => {
             },
             token  // Send the token to the frontend
         });
+
     } catch (error) {
         console.error('❌ Login error:', error.message);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 
 
 // ✅ Fetch all classes for a specific teacher (using query parameter)
