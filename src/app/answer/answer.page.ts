@@ -188,21 +188,30 @@ export class AnswerPage implements OnInit {
 
   deleteAnswerSheet(answerSheetId: number) {
     this.http.delete(`${this.BASE_URL}/answer-sheets/${answerSheetId}`).subscribe(
-      response => {
+      (response: any) => {
         console.log('✅ Answer sheet deleted:', response);
-        if (response) {
-          alert('Answer sheet deleted successfully!');
-          this.getAnswerSheets();
+  
+        // Check if the response is a valid JSON object with a message
+        if (response && response.message) {
+          alert(response.message);  // Show the response message to the user
+          this.getAnswerSheets();  // Refresh the answer sheet list
         } else {
-          alert('Failed to delete answer sheet. No response from server.');
+          alert('Unexpected response format from server.');
         }
       },
       error => {
         console.error('❌ Error deleting answer sheet:', error);
-        alert('Failed to delete answer sheet.');
+        // Handle non-200 responses
+        if (error.status !== 200) {
+          alert(`Failed to delete answer sheet: ${error.message}`);
+        } else {
+          alert('Failed to delete answer sheet. Unknown issue.');
+        }
       }
     );
   }
+  
+  
   
 
   resetForm() {
