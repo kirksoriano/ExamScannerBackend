@@ -82,10 +82,11 @@ export class AnswerPage implements OnInit {
       },
       error => {
         console.error('❌ Error saving answer sheet:', error);
+        console.error('Error details:', error.error); // Log more details for better debugging
         alert('Failed to save answer sheet.');
       }
     );
-  }
+  }    
 
   getAnswerSheets() {
     if (!this.teacherId) {
