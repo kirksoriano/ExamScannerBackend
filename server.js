@@ -274,8 +274,8 @@ app.get('/answer-sheets', async (req, res) => {
   
   app.post('/answer-sheets', async (req, res) => {
     const { examTitle, subject, gradeLevel, questions, teacher_id } = req.body;
-    
-    console.log('Received data:', req.body);  // Add logging here
+  
+    console.log('Received request body:', req.body);  // Log the body here
     
     if (!teacher_id || !examTitle || !subject || !gradeLevel || !questions) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -290,9 +290,11 @@ app.get('/answer-sheets', async (req, res) => {
       res.json({ id: result.insertId, message: 'Answer sheet saved' });
     } catch (err) {
       console.error('❌ Error saving answer sheet:', err);
-      res.status(500).json({ message: 'Server error while saving answer sheet' });
+      res.status(500).json({ message: 'Server error while saving answer sheet', error: err.message });
     }
   });
+  
+  
   
   
 
