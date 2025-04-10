@@ -75,8 +75,7 @@ app.post("/register", async (req, res) => {
         });
     } catch (err) {
         console.error("❌ Registration error:", err);
-        console.error('Full Error:', err);  // Log the full error object
-        return res.status(500).json({ message: "Server error during registration." });
+        res.status(500).json({ message: "Server error during registration." });
     }
 });
 
@@ -99,22 +98,21 @@ app.post('/login', async (req, res) => {
         // Create a JWT token
         const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        res.json({
+        res.status(200).json({
             message: 'Login successful',
             user: {
-                id: user.id,  // This is your teacher_id
+                id: user.id,
                 name: user.name,
                 email: user.email
             },
             token  // Send the token to the frontend
         });
-        
     } catch (error) {
         console.error('❌ Login error:', error.message);
-        console.error('Full Error:', error);  // Log the full error object
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 
 // ✅ Fetch all classes for a specific teacher (using query parameter)
 app.get('/classes', async (req, res) => {
