@@ -150,26 +150,26 @@ export class AnswerPage implements OnInit {
 
   editAnswerSheet(answerSheet: any) {
     this.selectedAnswerSheet = answerSheet;
-    this.examTitle = answerSheet.examTitle;
+    this.examTitle = answerSheet.exam_title;       // Changed to snake_case
     this.subject = answerSheet.subject;
-    this.gradeLevel = answerSheet.gradeLevel;
+    this.gradeLevel = answerSheet.grade_level;     // Changed to snake_case
     this.numQuestions = answerSheet.questions.length;
     this.questions = [...answerSheet.questions];
   }
-
+  
   updateAnswerSheet() {
     if (!this.selectedAnswerSheet) {
       alert('No answer sheet selected for editing.');
       return;
     }
-
+  
     const updatedData = {
-      examTitle: this.examTitle,
+      exam_title: this.examTitle,      // Changed to snake_case
       subject: this.subject,
-      gradeLevel: this.gradeLevel,
+      grade_level: this.gradeLevel,   // Changed to snake_case
       questions: this.questions
     };
-
+  
     this.http.put(`${this.BASE_URL}/answer-sheets/${this.selectedAnswerSheet.id}`, updatedData).subscribe(
       response => {
         console.log('✅ Answer sheet updated:', response);
@@ -184,6 +184,7 @@ export class AnswerPage implements OnInit {
       }
     );
   }
+  
 
   deleteAnswerSheet(answerSheetId: number) {
     this.http.delete(`${this.BASE_URL}/answer-sheets/${answerSheetId}`).subscribe(

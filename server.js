@@ -296,22 +296,26 @@ app.post('/answer-sheets', async (req, res) => {
   });
   
   
-  // Edit an Answer Sheet
   app.put('/answer-sheets/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, file_url } = req.body;
+    const { exam_title, subject, grade_level, questions } = req.body;
+  
+    if (!exam_title || !subject || !grade_level || !questions) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
   
     try {
       await db.query(
-        'UPDATE answer_sheets SET name = ?, file_url = ? WHERE id = ?',
-        [name, file_url, id]
+        'UPDATE answer_sheets SET exam_title = ?, subject = ?, grade_level = ?, questions = ? WHERE id = ?',
+        [exam_title, subject, grade_level, JSON.stringify(questions), id]
       );
-      res.status(200).send('Answer Sheet updated');
+      res.status(200).json({ message: 'Answer sheet updated' });
     } catch (error) {
       console.error('❌ Error updating answer sheet:', error);
-      res.status(500).send('Server error');
+      res.status(500).json({ message: 'Server error' });
     }
   });
+  
   
   
   // Delete an Answer Sheet
