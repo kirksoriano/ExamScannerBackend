@@ -1,71 +1,83 @@
 <ion-header>
   <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button defaultHref="/teacher-dashboard"></ion-back-button>
-    </ion-buttons>
-    <ion-title>Manage Classes & Students</ion-title>
+    <ion-title>Students</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <!-- Add New Class -->
+<ion-content>
+  <!-- Add Class -->
   <ion-item>
-    <ion-input [(ngModel)]="newClass.name" placeholder="Enter class name"></ion-input>
-    <ion-button expand="full" (click)="addClass()">Add Class</ion-button>
+    <ion-label position="floating">Class Name</ion-label>
+    <ion-input [(ngModel)]="className" required></ion-input>
   </ion-item>
+  <ion-button expand="full" (click)="addClass()">Add Class</ion-button>
 
   <!-- List of Classes -->
   <ion-list>
     <ion-item *ngFor="let classItem of classes">
-      <!-- Edit Mode for Class -->
-      <div *ngIf="isEditingClass[classItem.id]; else viewClass">
-        <ion-input [(ngModel)]="editedClassName[classItem.id]" placeholder="Edit class name"></ion-input>
-        <ion-button color="success" (click)="saveEditedClass(classItem)">Save</ion-button>
-        <ion-button color="danger" (click)="cancelEditClass(classItem)">Cancel</ion-button>
-      </div>
+      <ion-label (click)="selectClass(classItem)">
+        {{ classItem.name }}
+      </ion-label>
+      
+      <ion-button slot="end" *ngIf="!isEditingClass[classItem.id]" (click)="startEditingClass(classItem)">
+        Edit
+      </ion-button>
+      <ion-button slot="end" *ngIf="isEditingClass[classItem.id]" (click)="saveEditedClass(classItem)">
+        Save
+      </ion-button>
+      <ion-button slot="end" *ngIf="isEditingClass[classItem.id]" (click)="cancelEditClass(classItem)">
+        Cancel
+      </ion-button>
+      <ion-button slot="end" (click)="deleteClass(classItem)">
+        Delete
+      </ion-button>
 
-      <!-- View Mode for Class -->
-      <ng-template #viewClass>
-        <span (click)="selectedClass(classItem)">{{ classItem.name }}</span>
-        <ion-button fill="outline" color="primary" (click)="startEditingClass(classItem)">Edit</ion-button>
-        <ion-button fill="outline" color="danger" (click)="deleteClass(classItem)">Delete</ion-button>
-      </ng-template>
+      <ion-input *ngIf="isEditingClass[classItem.id]" [(ngModel)]="editedClassName[classItem.id]" placeholder="Edit class name"></ion-input>
     </ion-item>
   </ion-list>
 
-  <!-- Students Section -->
-  <div *ngIf="selectedClass">
-    <h2>Students in {{ selectedClass.name }}</h2>
-
-    <!-- Add New Student -->
-    <ion-item>
-      <ion-input [(ngModel)]="newStudent.name" placeholder="Enter student name"></ion-input>
-      <ion-select [(ngModel)]="newStudent.grade_level" placeholder="Select grade level">
-        <ion-select-option *ngFor="let grade of gradeLevels" [value]="grade">{{ grade }}</ion-select-option>
-      </ion-select>
-      <ion-button expand="full" (click)="addStudent()">Add Student</ion-button>
-    </ion-item>
-
-    <!-- List of Students -->
-    <ion-list>
-      <ion-item *ngFor="let student of selectedClass.students">
-        <!-- Edit Mode for Student -->
-        <div *ngIf="isEditingStudent[student.id]; else viewStudent">
-          <ion-input [(ngModel)]="editedStudentData[student.id].name" placeholder="Edit student name"></ion-input>
-          <ion-select [(ngModel)]="editedStudentData[student.id].grade_level">
-            <ion-select-option *ngFor="let grade of gradeLevels" [value]="grade">{{ grade }}</ion-select-option>
-          </ion-select>
-          <ion-button color="success" (click)="saveEditedStudent(student)">Save</ion-button>
-          <ion-button color="danger" (click)="cancelEditStudent(student)">Cancel</ion-button>
-        </div>
-
-        <!-- View Mode for Student -->
-        <ng-template #viewStudent>
-          <span>{{ student.name }} - {{ student.grade_level }}</span>
-          <ion-button fill="outline" color="primary" (click)="startEditingStudent(student)">Edit</ion-button>
-          <ion-button fill="outline" color="danger" (click)="deleteStudent(student)">Delete</ion-button>
-        </ng-template>
+  <!-- Class Students -->
+  <ion-card *ngIf="selectedClass">
+    <ion-card-header>
+      <ion-card-title>{{ selectedClass.name }}</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label position="floating">Student Name</ion-label>
+        <ion-input [(ngModel)]="newStudent.name" required></ion-input>
       </ion-item>
-    </ion-list>
-  </div>
+
+      <ion-item>
+        <ion-label>Grade Level</ion-label>
+        <ion-select [(ngModel)]="selectedGradeLevel">
+          <ion-select-option *ngFor="let grade of gradeLevels" [value]="grade">{{ grade }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-button expand="full" (click)="addStudent()">Add Student</ion-button>
+
+      <ion-list>
+        <ion-item *ngFor="let student of selectedClass.students">
+          <ion-label>
+            {{ student.name }} ({{ student.grade_level }})
+          </ion-label>
+
+          <ion-button slot="end" *ngIf="!isEditingStudent[student.id]" (click)="startEditingStudent(student)">
+            Edit
+          </ion-button>
+          <ion-button slot="end" *ngIf="isEditingStudent[student.id]" (click)="saveEditedStudent(student)">
+            Save
+          </ion-button>
+          <ion-button slot="end" *ngIf="isEditingStudent[student.id]" (click)="cancelEditStudent(student)">
+            Cancel
+          </ion-button>
+          <ion-button slot="end" (click)="deleteStudent(student)">
+            Delete
+          </ion-button>
+
+          <ion-input *ngIf="isEditingStudent[student.id]" [(ngModel)]="editedStudentData[student.id].name" placeholder="Edit student name"></ion-input>
+        </ion-item>
+      </ion-list>
+    </ion-card-content>
+  </ion-card>
 </ion-content>

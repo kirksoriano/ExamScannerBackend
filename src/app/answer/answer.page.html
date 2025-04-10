@@ -3,12 +3,13 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/teacher-dashboard"></ion-back-button>
     </ion-buttons>
-    <ion-title>Create Answer Sheet</ion-title>
+    <ion-title>{{ selectedAnswerSheet ? 'Edit' : 'Create' }} Answer Sheet</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <form (submit)="saveAnswerSheet()">
+  <!-- Form for creating or updating an answer sheet -->
+  <form (submit)="selectedAnswerSheet ? updateAnswerSheet() : saveAnswerSheet()">
     <ion-item>
       <ion-label position="floating">Exam Title</ion-label>
       <ion-input [(ngModel)]="examTitle" name="examTitle" required></ion-input>
@@ -41,9 +42,10 @@
       </ion-item>
     </div>
 
-    <ion-button expand="full" type="submit">Save Answer Sheet</ion-button>
+    <ion-button expand="full" type="submit">{{ selectedAnswerSheet ? 'Update' : 'Save' }} Answer Sheet</ion-button>
   </form>
 
+  <!-- Display the list of saved answer sheets -->
   <ion-list>
     <ion-item *ngFor="let sheet of answerSheets">
       <ion-label>
@@ -57,6 +59,10 @@
           </li>
         </ul>
       </ion-label>
+      <ion-buttons slot="end">
+        <ion-button (click)="editAnswerSheet(sheet)">Edit</ion-button>
+        <ion-button color="danger" (click)="deleteAnswerSheet(sheet.id)">Delete</ion-button>
+      </ion-buttons>
     </ion-item>
   </ion-list>
 </ion-content>

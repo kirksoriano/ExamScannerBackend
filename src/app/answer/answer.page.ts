@@ -26,12 +26,13 @@ export class AnswerPage {
   answerOptions = ['A', 'B', 'C', 'D', 'True', 'False']; // Supports MCQs & True/False
 
   answerSheets: any[] = []; // Array to store fetched answer sheets
+  selectedAnswerSheet: any = null; // Selected answer sheet for editing
 
   @ViewChild('canvas') canvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   loggedInTeacher: any;
-  
+
   constructor(
     private http: HttpClient, 
     private authService: AuthService, 
@@ -45,6 +46,7 @@ export class AnswerPage {
       // If no teacher data or ID is available, navigate to login
       this.router.navigate(['/home']);
     }
+    this.getAnswerSheets(); // Fetch answer sheets when the page loads
   }
 
   // Generate answer input fields when number of questions is entered
@@ -150,5 +152,68 @@ export class AnswerPage {
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
+  }
+
+  // Edit an existing answer sheet
+  editAnswerSheet(answerSheet: any) {
+    this.selectedAnswerSheet = answerSheet;
+    this.examTitle = answerSheet.examTitle;
+    this.subject = answerSheet.subject;
+    this.gradeLevel = answerSheet.gradeLevel;
+    this.numQuestions = answerSheet.questions.length;
+    this.questions = answerSheet.questions;
+  }
+
+  // Update an answer sheet
+  updateAnswerSheet() {
+    if (!this.selectedAnswerSheet) {
+      alert('No answer sheet selected for editing.');
+      return;
+    }
+
+    const updatedData = {
+      examTitle: this.examTitle,
+      subject: this.subject,
+      gradeLevel: this.gradeLevel,
+      questions: this.questions
+    };
+
+    this.http.put(`${this.BASE_URL}/answer-sheets/${this.selectedAnswerSheet.id}`, updatedData).subscribe(
+      response => {
+        console.log('✅ Answer sheet updated:', response);
+        alert('Answer sheet updated successfully!');
+        this.getAnswerSheets(); // Refresh the list after updating
+        this.selectedAnswerSheet = null; // Clear selection
+        this.resetForm(); // Reset the form
+      },
+      error => {
+        console.error('❌ Error updating answer sheet:', error);
+        alert('Failed to update answer sheet.');
+      }
+    );
+  }
+
+  // Delete an answer sheet
+  deleteAnswerSheet(answerSheetId: number) {
+    this.http.delete(`${this.BASE_URL}/answer-sheets/${answerSheetId}`).subscribe(
+      response => {
+        console.log('✅ Answer sheet deleted:', response);
+        alert('Answer sheet deleted successfully!');
+        this.getAnswerSheets(); // Refresh the list after deletion
+      },
+      error => {
+        console.error('❌ Error deleting answer sheet:', error);
+        alert('Failed to delete answer sheet.');
+      }
+    );
+  }
+
+  // Reset the form
+  resetForm() {
+    this.examTitle = '';
+    this.subject = '';
+    this.gradeLevel = '';
+    this.numQuestions = 0;
+    this.questions = [];
   }
 }

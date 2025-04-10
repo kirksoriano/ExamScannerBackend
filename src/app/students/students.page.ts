@@ -55,6 +55,7 @@ export class StudentsPage implements OnInit {
   selectClass(classItem: any) {
     this.selectedClass = classItem;
     console.log('Selected class:', this.selectedClass);
+    this.fetchStudents(classItem.id);  // Fetch students when a class is selected
   }
 
   fetchClasses() {
