@@ -8,6 +8,13 @@ const jwt = require("jsonwebtoken");
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Ensure the JWT_SECRET is loaded properly
+if (!process.env.JWT_SECRET) {
+    console.error("❌ JWT_SECRET is missing.");
+    process.exit(1);
+}
+
+// Log the URL for verification (to ensure environment variables are loaded correctly)
 console.log("✅ DATABASE_URL:", process.env.DATABASE_URL);
 if (!process.env.DATABASE_URL) {
     console.error("❌ DATABASE_URL is missing.");
@@ -68,6 +75,7 @@ app.post("/register", async (req, res) => {
         });
     } catch (err) {
         console.error("❌ Registration error:", err);
+        console.error('Full Error:', err);  // Log the full error object
         return res.status(500).json({ message: "Server error during registration." });
     }
 });
@@ -103,6 +111,7 @@ app.post('/login', async (req, res) => {
         
     } catch (error) {
         console.error('❌ Login error:', error.message);
+        console.error('Full Error:', error);  // Log the full error object
         res.status(500).json({ message: 'Internal server error' });
     }
 });

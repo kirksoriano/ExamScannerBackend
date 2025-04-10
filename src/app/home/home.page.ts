@@ -56,7 +56,7 @@ export class HomePage implements OnInit {
         } else {
           const alert = await this.alertCtrl.create({
             header: 'Login Failed',
-            message: 'Token not found in response.',
+            message: 'Token not found in response. Please try again later.',
             buttons: ['OK'],
           });
           await alert.present();
@@ -64,6 +64,7 @@ export class HomePage implements OnInit {
       },
       async (err) => {
         await loading.dismiss();
+        console.error('Login error:', err);  // Log full error to understand why it fails
         const alert = await this.alertCtrl.create({
           header: 'Login Failed',
           message: err.error.message || 'Invalid email or password.',
@@ -74,8 +75,6 @@ export class HomePage implements OnInit {
     );
   }
   
-  
-
   async register() {
     const loading = await this.loadingCtrl.create({
       message: 'Registering...',
@@ -99,9 +98,10 @@ export class HomePage implements OnInit {
       },
       async (err) => {
         await loading.dismiss();
+        console.error('Registration error:', err);  // Log full error for debugging
         const alert = await this.alertCtrl.create({
           header: 'Registration Failed',
-          message: err.error.message || 'Could not register.',
+          message: err.error.message || 'Could not register. Please try again.',
           buttons: ['OK'],
         });
         await alert.present();
