@@ -190,8 +190,12 @@ export class AnswerPage implements OnInit {
     this.http.delete(`${this.BASE_URL}/answer-sheets/${answerSheetId}`).subscribe(
       response => {
         console.log('✅ Answer sheet deleted:', response);
-        alert('Answer sheet deleted successfully!');
-        this.getAnswerSheets();
+        if (response) {
+          alert('Answer sheet deleted successfully!');
+          this.getAnswerSheets();
+        } else {
+          alert('Failed to delete answer sheet. No response from server.');
+        }
       },
       error => {
         console.error('❌ Error deleting answer sheet:', error);
@@ -199,6 +203,7 @@ export class AnswerPage implements OnInit {
       }
     );
   }
+  
 
   resetForm() {
     this.examTitle = '';

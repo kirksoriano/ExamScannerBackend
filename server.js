@@ -321,15 +321,18 @@ app.post('/answer-sheets', async (req, res) => {
   // Delete an Answer Sheet
   app.delete('/answer-sheets/:id', async (req, res) => {
     const { id } = req.params;
-  
     try {
-      await db.query('DELETE FROM answer_sheets WHERE id = ?', [id]);
+      const result = await db.query('DELETE FROM answer_sheets WHERE id = ?', [id]);
+      if (result.affectedRows === 0) {
+        return res.status(404).send('Answer sheet not found');
+      }
       res.status(200).send('Answer Sheet deleted');
     } catch (error) {
-      console.error('❌ Error deleting answer sheet:', error);
+      console.error(error);
       res.status(500).send('Server error');
     }
   });
+  
   
 app.get('/routes-check', (req, res) => {
     res.json({
