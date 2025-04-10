@@ -251,32 +251,47 @@ app.delete('/students/:studentId', async (req, res) => {
 });
 
 
-// Fetch Answer Sheets for a class
 app.get('/answer-sheets', async (req, res) => {
-  const { classId } = req.query;
-  try {
-    const [rows] = await db.query('SELECT * FROM answer_sheets WHERE class_id = ?', [classId]);
-    res.json(rows);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-});
-
-// Add a new Answer Sheet
-app.post('/answer-sheets', async (req, res) => {
-  const { class_id, name, file_url } = req.body;
-  try {
-    const [result] = await db.query(
-      'INSERT INTO answer_sheets (class_id, name, file_url) VALUES (?, ?, ?)', 
-      [class_id, name, file_url]
-    );
-    res.status(201).json({ id: result.insertId, class_id, name, file_url });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-});
+    const teacherId = req.query.teacher_id;
+  
+    if (!teacherId) {
+      return res.status(400).json({ message: 'Missing teacher_id in query' });
+    }
+  
+    try {
+      const [rows] = await db.execute(
+        'SELECT * FROM answer_sheets WHERE teacher_id = ?',
+        [teacherId]
+      );
+  
+      res.json(rows);
+    } catch (err) {
+      console.error('❌ Error fetching answer sheets:', err);
+      res.status(500).json({ message: 'Server error while fetching answer sheets' });
+    }
+  });
+  
+  
+  app.post('/answer-sheets', async (req, res) => {
+    const { examTitle, subject, gradeLevel, questions, teacher_id } = req.body;
+  
+    if (!teacher_id || !examTitle || !subject || !gradeLevel || !questions) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+  
+    try {
+      const [result] = await db.execute(
+        'INSERT INTO answer_sheets (examTitle, subject, gradeLevel, questions, teacher_id) VALUES (?, ?, ?, ?, ?)',
+        [examTitle, subject, gradeLevel, JSON.stringify(questions), teacher_id]
+      );
+  
+      res.json({ id: result.insertId, message: 'Answer sheet saved' });
+    } catch (err) {
+      console.error('❌ Error saving answer sheet:', err);
+      res.status(500).json({ message: 'Server error while saving answer sheet' });
+    }
+  });
+  
 
 // Edit an Answer Sheet
 app.put('/answer-sheets/:id', async (req, res) => {
@@ -303,6 +318,16 @@ app.delete('/answer-sheets/:id', async (req, res) => {
   }
 });
 
+app.get('/routes-check', (req, res) => {
+    res.json({
+      message: "Routes check",
+      routes: [
+        "GET /classes/:classId/students",
+        "POST /students"
+      ]
+    });
+  });
+  
 // ✅ Start the Server
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Server running on port ${PORT}`);

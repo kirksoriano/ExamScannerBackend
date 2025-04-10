@@ -16,7 +16,7 @@ export class StudentsPage implements OnInit {
   className: string = '';
   BASE_URL = 'https://examscannerbackend-production.up.railway.app';
   teacherId: any;
-
+  students: any[] = [];
   classes: any[] = [];
   selectedClass: any;
   newClass: { name: string; teacher_id: number } = { name: '', teacher_id: 0 };
@@ -52,11 +52,6 @@ export class StudentsPage implements OnInit {
     this.fetchClasses();
   }
 
-  selectClass(classItem: any) {
-    this.selectedClass = classItem;
-    console.log('Selected class:', this.selectedClass);
-    this.fetchStudents(classItem.id);  // Fetch students when a class is selected
-  }
 
   fetchClasses() {
     if (!this.teacherId) return;
@@ -98,20 +93,26 @@ export class StudentsPage implements OnInit {
     });
   }
 
+  selectClass(classItem: any) {
+    this.selectedClass = classItem;
+    console.log('Selected class:', this.selectedClass);
+    this.fetchStudents(classItem.id);  // Fetch students when a class is selected
+  }
+  
   fetchStudents(classId: number) {
-    if (!classId || !this.teacherId) return;
-
-    this.http.get<any[]>(`${this.BASE_URL}/students?classId=${classId}&teacherId=${this.teacherId}`).subscribe({
-      next: (data) => {
-        this.selectedClass.students = data;
-        console.log('Students fetched:', data);
+    this.http.get<any[]>(`${this.BASE_URL}/classes/${classId}/students`).subscribe({
+      next: (students) => {
+        this.selectedClass.students = students;  // Populate students within the selectedClass object
+        console.log('✅ Students fetched:', students);
       },
       error: (err) => {
-        console.error('Error fetching students:', err);
-        alert('Failed to load students.');
+        console.error('❌ Error fetching students:', err);
+        alert('Failed to fetch students.');
       }
     });
   }
+  
+  
 
   addStudent() {
     if (!this.newStudent.name.trim() || !this.selectedGradeLevel || !this.selectedClass) {
@@ -184,14 +185,26 @@ export class StudentsPage implements OnInit {
   }
 
   saveEditedStudent(student: any) {
-    const updatedStudent = this.editedStudentData[student.id];
-
-    this.http.put(`${this.BASE_URL}/students/${student.id}`, updatedStudent).subscribe(() => {
-      student.name = updatedStudent.name;
-      student.grade_level = updatedStudent.grade_level;
-      this.cancelEditStudent(student);
+    const updatedStudent = {
+      name: this.editedStudentData[student.id].name,
+      class_id: this.selectedClass?.id
+    };
+  
+    console.log('Submitting updated student:', updatedStudent);
+  
+    this.http.put(`${this.BASE_URL}/students/${student.id}`, updatedStudent).subscribe({
+      next: () => {
+        student.name = updatedStudent.name;
+        student.grade_level = this.editedStudentData[student.id].grade_level; // Keep existing grade_level
+        this.cancelEditStudent(student);
+      },
+      error: (err) => {
+        console.error('❌ Error updating student:', err);
+        alert('Failed to update student.');
+      }
     });
   }
+  
 
   cancelEditStudent(student: any) {
     this.isEditingStudent[student.id] = false;

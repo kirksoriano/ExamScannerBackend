@@ -1,9 +1,8 @@
-import { Component, ElementRef, ViewChild } from '@angular/core';
-import { IonicModule } from '@ionic/angular';
+import { Component, ElementRef, ViewChild, OnInit } from '@angular/core';
+import { IonicModule, NavController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { AuthService } from '../services/auth.service'; // Adjust based on your actual file structure
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 
 declare var cv: any; // Declare cv to avoid TypeScript errors
@@ -15,7 +14,7 @@ declare var cv: any; // Declare cv to avoid TypeScript errors
   standalone: true,
   imports: [CommonModule, FormsModule, IonicModule]
 })
-export class AnswerPage {
+export class AnswerPage implements OnInit {
   BASE_URL = 'https://examscannerbackend-production.up.railway.app';
 
   examTitle = '';
@@ -23,33 +22,36 @@ export class AnswerPage {
   gradeLevel = '';
   numQuestions = 0;
   questions: any[] = [];
-  answerOptions = ['A', 'B', 'C', 'D', 'True', 'False']; // Supports MCQs & True/False
+  answerOptions = ['A', 'B', 'C', 'D', 'True', 'False'];
 
-  answerSheets: any[] = []; // Array to store fetched answer sheets
-  selectedAnswerSheet: any = null; // Selected answer sheet for editing
+  answerSheets: any[] = [];
+  selectedAnswerSheet: any = null;
+
+  teacherId: any;
 
   @ViewChild('canvas') canvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
-  loggedInTeacher: any;
-
   constructor(
-    private http: HttpClient, 
-    private authService: AuthService, 
+    private http: HttpClient,
+    private navCtrl: NavController,
     private router: Router
   ) {}
 
   ngOnInit() {
-    this.loggedInTeacher = JSON.parse(localStorage.getItem('teacher') || '{}');
-    
-    if (!this.loggedInTeacher || !this.loggedInTeacher.id) {
-      // If no teacher data or ID is available, navigate to login
-      this.router.navigate(['/home']);
+    const userData = localStorage.getItem('userData');
+    if (!userData) {
+      this.navCtrl.navigateRoot('/home');
+      return;
     }
-    this.getAnswerSheets(); // Fetch answer sheets when the page loads
+
+    const user = JSON.parse(userData);
+    this.teacherId = user.id;
+    console.log('✅ Teacher ID loaded:', this.teacherId);
+
+    this.getAnswerSheets();
   }
 
-  // Generate answer input fields when number of questions is entered
   generateAnswerFields() {
     this.questions = Array.from({ length: this.numQuestions }, (_, i) => ({
       questionNumber: i + 1,
@@ -57,10 +59,8 @@ export class AnswerPage {
     }));
   }
 
-  // Save the answer sheet to the database
   saveAnswerSheet() {
-    // Check if logged-in teacher exists in localStorage
-    if (!this.loggedInTeacher || !this.loggedInTeacher.id) {
+    if (!this.teacherId) {
       alert('Teacher not logged in.');
       return;
     }
@@ -70,14 +70,15 @@ export class AnswerPage {
       subject: this.subject,
       gradeLevel: this.gradeLevel,
       questions: this.questions,
-      teacher_id: this.loggedInTeacher.id  // Use the teacher_id from the logged-in teacher
+      teacher_id: this.teacherId
     };
 
     this.http.post(`${this.BASE_URL}/answer-sheets`, answerSheetData).subscribe(
       response => {
         console.log('✅ Answer sheet saved:', response);
         alert('Answer sheet saved successfully!');
-        this.getAnswerSheets(); // Refresh the list after saving
+        this.getAnswerSheets();
+        this.resetForm();
       },
       error => {
         console.error('❌ Error saving answer sheet:', error);
@@ -86,15 +87,13 @@ export class AnswerPage {
     );
   }
 
-  // Fetch saved answer sheets from the server
   getAnswerSheets() {
-    // Check if logged-in teacher exists in localStorage
-    if (!this.loggedInTeacher || !this.loggedInTeacher.id) {
+    if (!this.teacherId) {
       alert('Teacher not logged in.');
       return;
     }
 
-    this.http.get(`${this.BASE_URL}/answer-sheets?teacher_id=${this.loggedInTeacher.id}`).subscribe(
+    this.http.get(`${this.BASE_URL}/answer-sheets?teacher_id=${this.teacherId}`).subscribe(
       (response: any) => {
         console.log("✅ Fetched answer sheets:", response);
         this.answerSheets = response;
@@ -106,7 +105,6 @@ export class AnswerPage {
     );
   }
 
-  // Handle file selection
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
@@ -114,7 +112,6 @@ export class AnswerPage {
     }
   }
 
-  // Process image using OpenCV.js
   processImage(file: File) {
     const reader = new FileReader();
     reader.onload = (e: any) => {
@@ -127,22 +124,18 @@ export class AnswerPage {
           canvas.height = img.height;
           ctx.drawImage(img, 0, 0, img.width, img.height);
 
-          // Convert to grayscale and process using OpenCV.js
           const src = cv.imread(canvas);
           const gray = new cv.Mat();
           cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
-          // Threshold to make the bubbles clearer
           const thresh = new cv.Mat();
           cv.threshold(gray, thresh, 150, 255, cv.THRESH_BINARY_INV);
 
-          // Detect circles (answer bubbles)
           const circles = new cv.Mat();
           cv.HoughCircles(thresh, circles, cv.HOUGH_GRADIENT, 1, 20, 100, 30, 10, 30);
 
           console.log('Detected circles:', circles.data32F);
 
-          // Cleanup
           src.delete();
           gray.delete();
           thresh.delete();
@@ -154,17 +147,15 @@ export class AnswerPage {
     reader.readAsDataURL(file);
   }
 
-  // Edit an existing answer sheet
   editAnswerSheet(answerSheet: any) {
     this.selectedAnswerSheet = answerSheet;
     this.examTitle = answerSheet.examTitle;
     this.subject = answerSheet.subject;
     this.gradeLevel = answerSheet.gradeLevel;
     this.numQuestions = answerSheet.questions.length;
-    this.questions = answerSheet.questions;
+    this.questions = [...answerSheet.questions];
   }
 
-  // Update an answer sheet
   updateAnswerSheet() {
     if (!this.selectedAnswerSheet) {
       alert('No answer sheet selected for editing.');
@@ -182,9 +173,9 @@ export class AnswerPage {
       response => {
         console.log('✅ Answer sheet updated:', response);
         alert('Answer sheet updated successfully!');
-        this.getAnswerSheets(); // Refresh the list after updating
-        this.selectedAnswerSheet = null; // Clear selection
-        this.resetForm(); // Reset the form
+        this.getAnswerSheets();
+        this.selectedAnswerSheet = null;
+        this.resetForm();
       },
       error => {
         console.error('❌ Error updating answer sheet:', error);
@@ -193,13 +184,12 @@ export class AnswerPage {
     );
   }
 
-  // Delete an answer sheet
   deleteAnswerSheet(answerSheetId: number) {
     this.http.delete(`${this.BASE_URL}/answer-sheets/${answerSheetId}`).subscribe(
       response => {
         console.log('✅ Answer sheet deleted:', response);
         alert('Answer sheet deleted successfully!');
-        this.getAnswerSheets(); // Refresh the list after deletion
+        this.getAnswerSheets();
       },
       error => {
         console.error('❌ Error deleting answer sheet:', error);
@@ -208,7 +198,6 @@ export class AnswerPage {
     );
   }
 
-  // Reset the form
   resetForm() {
     this.examTitle = '';
     this.subject = '';
