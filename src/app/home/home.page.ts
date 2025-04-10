@@ -22,6 +22,9 @@ export class HomePage implements OnInit {
   registerName = '';
   isRegistering = false;
 
+  // Base URL for backend API (use your actual backend URL here)
+  private BASE_URL = 'https://examscannerbackend-production.up.railway.app';
+
   constructor(
     private http: HttpClient,
     private router: Router,
@@ -42,8 +45,8 @@ export class HomePage implements OnInit {
       message: 'Logging in...',
     });
     await loading.present();
-  
-    this.http.post<any>('https://examscannerbackend-production.up.railway.app/login', {
+
+    this.http.post<any>(`${this.BASE_URL}/login`, {
       email: this.loginEmail,
       password: this.loginPassword,
     }).subscribe(
@@ -80,7 +83,7 @@ export class HomePage implements OnInit {
     });
     await loading.present();
 
-    this.http.post<any>('https://examscannerbackend-production.up.railway.app/register', {
+    this.http.post<any>(`${this.BASE_URL}/register`, {
       name: this.registerName,
       email: this.registerEmail,
       password: this.registerPassword,
