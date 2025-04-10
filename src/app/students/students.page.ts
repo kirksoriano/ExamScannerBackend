@@ -119,17 +119,20 @@ export class StudentsPage implements OnInit {
       return;
     }
 
+    // Adjusted student data object
     const newStudentData = {
-      name: this.newStudent.name.trim(),
-      grade_level: this.selectedGradeLevel,
-      class_id: this.selectedClass.id,
-      teacher_id: this.teacherId
+      name: this.newStudent.name.trim(),  // Student's name
+      grade_level: this.selectedGradeLevel,  // Selected grade level
+      class_id: this.selectedClass.id  // The class the student is being added to
     };
 
+    // Send POST request to backend to add student
     this.http.post(`${this.BASE_URL}/students`, newStudentData).subscribe({
       next: () => {
+        // Clear input fields after adding the student
         this.newStudent.name = '';
         this.selectedGradeLevel = '';
+        // Refresh student list
         this.fetchStudents(this.selectedClass.id);
       },
       error: (err) => {
@@ -137,7 +140,9 @@ export class StudentsPage implements OnInit {
         alert('Failed to add student.');
       }
     });
-  }
+}
+
+
 
   startEditingClass(classItem: any) {
     this.isEditingClass[classItem.id] = true;

@@ -1,5 +1,8 @@
 <ion-header>
   <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/teacher-dashboard"></ion-back-button>
+    </ion-buttons>
     <ion-title>Students</ion-title>
   </ion-toolbar>
 </ion-header>
@@ -18,7 +21,8 @@
       <ion-label (click)="selectClass(classItem)">
         {{ classItem.name }}
       </ion-label>
-      
+
+      <!-- Class Edit Buttons -->
       <ion-button slot="end" *ngIf="!isEditingClass[classItem.id]" (click)="startEditingClass(classItem)">
         Edit
       </ion-button>
@@ -36,12 +40,13 @@
     </ion-item>
   </ion-list>
 
-  <!-- Class Students -->
+  <!-- Class Students Section -->
   <ion-card *ngIf="selectedClass">
     <ion-card-header>
       <ion-card-title>{{ selectedClass.name }}</ion-card-title>
     </ion-card-header>
     <ion-card-content>
+      <!-- Add Student Form -->
       <ion-item>
         <ion-label position="floating">Student Name</ion-label>
         <ion-input [(ngModel)]="newStudent.name" required></ion-input>
@@ -56,12 +61,14 @@
 
       <ion-button expand="full" (click)="addStudent()">Add Student</ion-button>
 
+      <!-- List of Students -->
       <ion-list>
         <ion-item *ngFor="let student of selectedClass.students">
           <ion-label>
             {{ student.name }} ({{ student.grade_level }})
           </ion-label>
 
+          <!-- Student Edit Buttons -->
           <ion-button slot="end" *ngIf="!isEditingStudent[student.id]" (click)="startEditingStudent(student)">
             Edit
           </ion-button>
@@ -75,6 +82,7 @@
             Delete
           </ion-button>
 
+          <!-- Student Edit Input -->
           <ion-input *ngIf="isEditingStudent[student.id]" [(ngModel)]="editedStudentData[student.id].name" placeholder="Edit student name"></ion-input>
         </ion-item>
       </ion-list>

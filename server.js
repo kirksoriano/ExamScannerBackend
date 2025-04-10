@@ -191,6 +191,29 @@ app.get('/classes/:classId/students', async (req, res) => {
     }
 });
 
+// POST /students - Add a student to a class
+app.post('/students', async (req, res) => {
+    const { name, grade_level, class_id } = req.body;
+
+    if (!name || !grade_level || !class_id) {
+        return res.status(400).json({ error: 'Missing required fields: name, grade_level, or class_id.' });
+    }
+
+    try {
+        const result = await db.query(
+            "INSERT INTO students (name, grade_level, class_id) VALUES (?, ?, ?)",
+            [name, grade_level, class_id]
+        );
+
+        res.status(201).json({ message: 'Student added successfully', studentId: result.insertId });
+    } catch (error) {
+        console.error("❌ Error adding student:", error.message);
+        res.status(500).json({ error: "Database error while adding student." });
+    }
+});
+
+
+
 // ✅ Edit student details
 app.put('/students/:studentId', async (req, res) => {
     const studentId = req.params.studentId;
