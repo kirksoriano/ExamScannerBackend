@@ -31,6 +31,11 @@
     </ion-card-content>
   </ion-card>
 
+  <!-- 🎨 Visual Overlay Canvas -->
+  <div *ngIf="showOverlayCanvas" style="text-align: center; margin-bottom: 20px;">
+    <canvas #overlayCanvas style="max-width: 100%; border: 1px solid #ccc;"></canvas>
+  </div>
+
   <!-- 🧠 Extracted OCR Text -->
   <ion-card *ngIf="extractedText">
     <ion-card-header>
@@ -38,6 +43,17 @@
     </ion-card-header>
     <ion-card-content>
       <ion-textarea readonly autoGrow>{{ extractedText }}</ion-textarea>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- 👤 Student Info from OCR -->
+  <ion-card *ngIf="studentName || studentId">
+    <ion-card-header>
+      <ion-card-title>Student Information</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p><strong>Name:</strong> {{ studentName || '—' }}</p>
+      <p><strong>ID:</strong> {{ studentId || '—' }}</p>
     </ion-card-content>
   </ion-card>
 
@@ -90,5 +106,27 @@
       </ion-item>
     </ion-card-content>
   </ion-card>
+
+  <!-- 🔘 Bubble Radius Control -->
+<ion-card *ngIf="previewImage">
+  <ion-card-header>
+    <ion-card-title>Bubble Detection Radius</ion-card-title>
+  </ion-card-header>
+  <ion-card-content>
+    <ion-item>
+      <ion-label>Radius: {{ bubbleRadius }}</ion-label>
+      <ion-range
+        min="10"
+        max="40"
+        step="1"
+        [(ngModel)]="bubbleRadius"
+        pin="true"
+        color="secondary">
+      </ion-range>
+    </ion-item>
+    <ion-button expand="full" color="medium" (click)="processImage()">🔁 Reprocess with New Radius</ion-button>
+  </ion-card-content>
+</ion-card>
+
 
 </ion-content>

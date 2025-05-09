@@ -1,0 +1,54 @@
+.table-container {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.tos-table {
+  min-width: 1200px;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.tos-table th,
+.tos-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+
+.print-only {
+  display: none;
+}
+
+/* When printing */
+@media print {
+  ion-header,
+  ion-toolbar,
+  ion-button,
+  ion-item,
+  .editable-table {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+    width: 100%;
+  }
+
+  .print-only table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .print-only th,
+  .print-only td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+  }
+}

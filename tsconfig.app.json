@@ -3,13 +3,14 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/app",
-    "types": ["node"]
+    "types": ["node","./src/opencv"]
   },
   "files": [
     "src/main.ts",
-    "src/polyfills.ts"
+    "src/polyfills.ts",
+    "src/opencv.d.ts"
   ],
   "include": [
-    "src/**/*.d.ts"
+    "src/opencv.d.ts"
   ]
 }

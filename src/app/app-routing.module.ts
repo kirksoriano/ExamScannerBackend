@@ -47,6 +47,23 @@ const routes: Routes = [
     path: 'answer',
     loadChildren: () => import('./answer/answer.module').then( (m) => m.AnswerPageModule)
   },
+
+  {
+    path: 'resultviewer',
+    loadChildren: () => import('./resultviewer/resultviewer.module').then( m => m.ResultviewerPageModule)
+  },
+  {
+    path: 'tester',
+    loadChildren: () => import('./tester/tester.module').then( m => m.TesterPageModule)
+  },
+  {
+    path: 'cropper',
+    loadChildren: () => import('./cropper/cropper.module').then( m => m.CropperPageModule)
+  },
+  {
+    path: 'question-generator',
+    loadChildren: () => import('./question-generator/question-generator.module').then( m => m.QuestionGeneratorPageModule)
+  },
 ];
 
 @NgModule({

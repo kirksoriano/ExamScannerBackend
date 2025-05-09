@@ -1,16 +1,110 @@
-<ion-header [translucent]="true">
+<ion-header>
   <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button defaultHref="/teacher-dashboard"></ion-back-button>
-    </ion-buttons>
-    <ion-title>tos</ion-title>
+    <ion-title>Table of Specification</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">tos</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content class="ion-padding">
+
+  <!-- Subject Input -->
+  <ion-item>
+    <ion-label position="floating">Subject</ion-label>
+    <ion-input [(ngModel)]="subjectTitle"></ion-input>
+  </ion-item>
+
+  <!-- Add Row and Print Buttons -->
+  <ion-buttons class="ion-margin-vertical" style="display: flex; gap: 10px;">
+    <ion-button expand="block" color="primary" (click)="addRow()">Add New Row</ion-button>
+    <ion-button expand="block" color="medium" (click)="printTOS()">Print TOS</ion-button>
+  </ion-buttons>
+
+  <!-- Editable Table (for screen only) -->
+  <div class="table-wrapper editable-table">
+    <div id="tosTable" class="table-container">
+      <h2 style="text-align: center;">{{ subjectTitle }}</h2>
+      <table class="tos-table">
+        <thead>
+          <tr>
+            <th>Learning Competencies</th>
+            <th>No. of Days</th>
+            <th>%</th>
+            <th>No. of Items</th>
+            <th>Remembering</th>
+            <th>Understanding</th>
+            <th>Applying</th>
+            <th>Analyzing</th>
+            <th>Evaluating</th>
+            <th>Creating</th>
+            <th>Total No. of Items</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of tableData; let i = index">
+            <td><ion-input [(ngModel)]="row.learningCompetencies"></ion-input></td>
+            <td><ion-input type="number" [(ngModel)]="row.noOfDays"></ion-input></td>
+            <td><ion-input type="number" [(ngModel)]="row.percentage"></ion-input></td>
+            <td><ion-input type="number" [(ngModel)]="row.noOfItems"></ion-input></td>
+            <td><ion-input type="number" [(ngModel)]="row.remembering" (ionInput)="updateTotal(i)"></ion-input></td>
+            <td><ion-input type="number" [(ngModel)]="row.understanding" (ionInput)="updateTotal(i)"></ion-input></td>
+            <td><ion-input type="number" [(ngModel)]="row.applying" (ionInput)="updateTotal(i)"></ion-input></td>
+            <td><ion-input type="number" [(ngModel)]="row.analyzing" (ionInput)="updateTotal(i)"></ion-input></td>
+            <td><ion-input type="number" [(ngModel)]="row.evaluating" (ionInput)="updateTotal(i)"></ion-input></td>
+            <td><ion-input type="number" [(ngModel)]="row.creating" (ionInput)="updateTotal(i)"></ion-input></td>
+            <td>{{ row.totalNoOfItems }}</td>
+            <td>
+              <ion-button color="danger" size="small" (click)="deleteRow(i)">
+                Delete
+              </ion-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Printable Table (for printing only) -->
+  <div class="table-wrapper print-only">
+    <div class="table-container">
+      <h2 style="text-align: center;">{{ subjectTitle }}</h2>
+      <table class="tos-table">
+        <thead>
+          <tr>
+            <th>Learning Competencies</th>
+            <th>No. of Days</th>
+            <th>%</th>
+            <th>No. of Items</th>
+            <th>Remembering</th>
+            <th>Understanding</th>
+            <th>Applying</th>
+            <th>Analyzing</th>
+            <th>Evaluating</th>
+            <th>Creating</th>
+            <th>Total No. of Items</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of tableData">
+            <td>{{ row.learningCompetencies }}</td>
+            <td>{{ row.noOfDays }}</td>
+            <td>{{ row.percentage }}</td>
+            <td>{{ row.noOfItems }}</td>
+            <td>{{ row.remembering }}</td>
+            <td>{{ row.understanding }}</td>
+            <td>{{ row.applying }}</td>
+            <td>{{ row.analyzing }}</td>
+            <td>{{ row.evaluating }}</td>
+            <td>{{ row.creating }}</td>
+            <td>{{ row.totalNoOfItems }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Generate Questions Button -->
+  <ion-button expand="block" color="success" (click)="generateQuestions()">
+    Generate Questions
+  </ion-button>
+
 </ion-content>

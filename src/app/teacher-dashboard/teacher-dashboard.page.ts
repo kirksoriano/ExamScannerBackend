@@ -65,4 +65,8 @@ export class TeacherDashboardPage implements OnInit {
   goBack() {
     this.navCtrl.navigateBack('/teacher-dashboard');
   }
+
+  goToTester() {
+    this.navCtrl.navigateForward('/tester');
+  }
 }

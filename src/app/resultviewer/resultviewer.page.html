@@ -1,0 +1,10 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Result Viewer</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <h2>Final Cropped Image</h2>
+  <img *ngIf="image" [src]="image" style="width: 100%; border: 1px solid #ccc;" />
+</ion-content>

@@ -1,0 +1,50 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Crop Document</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div style="text-align:center;">
+    <svg
+      [attr.viewBox]="viewBox"
+      preserveAspectRatio="xMidYMid meet"
+      [style.width.px]="640"
+      [style.height.px]="360"
+      (mousemove)="onRectMouseMove($event)"
+      (touchmove)="onRectTouchMove($event)"
+    >
+      <image *ngIf="dataURL" [attr.xlink:href]="dataURL" [attr.width]="imgWidth" [attr.height]="imgHeight"></image>
+      
+      <!-- Detected polygon -->
+      <polygon
+        *ngIf="points.length > 0"
+        [attr.points]="getPointsData()"
+        stroke="lime"
+        stroke-width="4"
+        fill="none"
+      ></polygon>
+
+      <!-- Drag handles -->
+      <rect *ngFor="let point of points; let i = index"
+        [attr.x]="getRectX(i, point.x)"
+        [attr.y]="getRectY(i, point.y)"
+        [attr.width]="getRectSize()"
+        [attr.height]="getRectSize()"
+        [attr.stroke-width]="getRectStrokeWidthgetRectStrokeWidth(i)"
+        stroke="red"
+        fill="white"
+        (mousedown)="onRectMouseDown(i, $event)"
+        (mouseup)="onRectMouseUp($event)"
+        (touchstart)="onRectTouchStart(i, $event)"
+      ></rect>
+    </svg>
+  </div>
+
+  <div class="ion-padding" style="text-align:center;">
+    <ion-button expand="block" (click)="detect()">Detect Document</ion-button>
+    <ion-button expand="block" color="success" (click)="confirmCrop()" [disabled]="points.length !== 4">
+      Confirm Crop
+    </ion-button>
+  </div>
+</ion-content>

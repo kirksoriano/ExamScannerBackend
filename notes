@@ -1,0 +1,18 @@
+//async detect(){
+  //let results = (await DocumentNormalizer.detect({source:this.dataURL})).results;
+  //if (results.length>0) {
+    //this.detectedQuadResult = results[0]; // Here, we only use the first detection result
+    //this.points = this.detectedQuadResult.location.points;
+  //}else {
+    //this.presentToast(); // Make a toast if there are no documents detected
+  //}
+//}
+
+//async presentToast(){
+  //const toast = await this.toastController.create({
+    //message: 'No documents detected.',
+    //duration: 1500,
+    //position: 'top'
+  //});
+  //await toast.present();
+//}
