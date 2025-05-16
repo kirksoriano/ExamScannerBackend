@@ -14,7 +14,7 @@ import { AuthService } from '../services/auth.service';
 })
 export class StudentsPage implements OnInit {
   className: string = '';
-  BASE_URL = 'https://examscannerbackend-production.up.railway.app';
+  BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
   teacherId: any;
   students: any[] = [];
   classes: any[] = [];

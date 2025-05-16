@@ -16,7 +16,8 @@ declare var cv: any; // Declare cv to avoid TypeScript errors
   imports: [CommonModule, FormsModule, IonicModule]
 })
 export class AnswerPage implements OnInit {
-  BASE_URL = 'https://examscannerbackend-production.up.railway.app';
+  BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app'
+
 
   examTitle = '';
   subject = '';

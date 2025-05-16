@@ -39,7 +39,7 @@ export class testprocessingPage implements AfterViewInit {
 
   
 
-  BASE_URL = 'https://examscannerbackend-production.up.railway.app';
+  BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
 
   studentPercentage: number = 0;
   classAveragePercentage: number = 0;
@@ -237,36 +237,6 @@ export class testprocessingPage implements AfterViewInit {
     return averageBrightness < 150; // threshold: lower = darker = filled
   }
   
-
-  scoreSheet(ctx: CanvasRenderingContext2D) {
-    let score = 0;
-    const results = bubbles.map((bubble, index) => {
-      let correct = 0;
-      let incorrect = 0;
-      for (const option in bubble.options) {
-        const opt = option as Option;
-        if (this.isBubbleFilled(ctx, bubble, opt)) {
-          const correctAnswer = this.answerKey[index + 1];
-          if (correctAnswer === opt) {
-            correct++;
-            score++;
-          } else {
-            incorrect++;
-          }
-        }
-      }
-      return { question: index + 1, correct, incorrect };
-    });
-
-    this.score = score;
-
-    this.router.navigate(['/resultviewer'], {
-      state: {
-        image: this.croppedImageUrl,
-        results: results
-      }
-    });
-  }
   processVideo() {
     try {
         const video = this.videoRef.nativeElement;
@@ -424,6 +394,36 @@ export class testprocessingPage implements AfterViewInit {
       src.delete(); dst.delete(); M.delete(); srcPoints.delete(); dstPoints.delete();
     }
     
+    
+  scoreSheet(ctx: CanvasRenderingContext2D) {
+    let score = 0;
+    const results = bubbles.map((bubble, index) => {
+      let correct = 0;
+      let incorrect = 0;
+      for (const option in bubble.options) {
+        const opt = option as Option;
+        if (this.isBubbleFilled(ctx, bubble, opt)) {
+          const correctAnswer = this.answerKey[index + 1];
+          if (correctAnswer === opt) {
+            correct++;
+            score++;
+          } else {
+            incorrect++;
+          }
+        }
+      }
+      return { question: index + 1, correct, incorrect };
+    });
+
+    this.score = score;
+
+    this.router.navigate(['/resultviewer'], {
+      state: {
+        image: this.croppedImageUrl,
+        results: results
+      }
+    });
+  }
     calculateResults(ctx: CanvasRenderingContext2D) {
       let score = 0;
       const results = [];

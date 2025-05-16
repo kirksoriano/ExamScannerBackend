@@ -23,7 +23,7 @@ export class HomePage implements OnInit {
   isRegistering = false;
 
   // Base URL for backend API (use your actual backend URL here)
-  private BASE_URL = 'https://examscannerbackend-production.up.railway.app';
+  BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
 
   constructor(
     private http: HttpClient,

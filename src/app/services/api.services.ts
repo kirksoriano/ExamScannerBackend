@@ -7,7 +7,7 @@ import { AuthService } from './auth.service';
   providedIn: 'root'
 })
 export class ApiService {
-  private baseUrl = 'https://examscannerbackend-production.up.railway.app'; // Your API base URL
+  private baseUrl = 'https://examscannerbackend-production-7460.up.railway.app';
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 

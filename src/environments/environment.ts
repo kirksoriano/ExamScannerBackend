@@ -4,7 +4,7 @@
 
 export const environment = {
   production: true,
-  apiUrl: 'https://examscannerbackend-production.up.railway.app'
+  apiUrl: 'https://examscannerbackend-production-7460.up.railway.app'
 };
 
 
