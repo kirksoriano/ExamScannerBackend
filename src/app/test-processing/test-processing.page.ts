@@ -1,215 +1,489 @@
-// ✅ Updated: Test Processing with Circle Detection, Warp, Fixed Coordinates, Scoring, OCR, and Overlays
-
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
-import { FormsModule } from '@angular/forms';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { CommonModule } from '@angular/common';
+import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { NgZone } from '@angular/core';
+import { BubbleTemplate, bubbles, Option } from '../data/bubble-template'; // Make sure this is correct
+import { Platform } from '@ionic/angular';
+import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { bubbles, Option } from '../data/bubble-template';
+import { NavController } from '@ionic/angular';
+import { ResultService } from '../services/result.service';
+
 declare var cv: any;
+
+
+interface Question {
+  questionNumber: number;
+  answer: 'A' | 'B' | 'C' | 'D' | 'E'; // or just string if you want more flexibility
+}
+
+interface AnswerSheet {
+  id: number;
+  teacher_id: number;
+  exam_title: string;
+  subject: string;
+  grade_level: string;
+  questions: Question[];
+}
 
 @Component({
   selector: 'app-test-processing',
-  templateUrl: './test-processing.page.html',
-  styleUrls: ['./test-processing.page.scss'],
+  templateUrl: 'test-processing.page.html',
+  styleUrls: ['test-processing.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, FormsModule],
+  imports: [IonicModule, CommonModule],
 })
-export class TestProcessingPage implements OnInit {
-  @ViewChild('overlayCanvas', { static: false }) overlayCanvas!: ElementRef<HTMLCanvasElement>;
-
-  previewImage: string | null = null; 
-  extractedText: string | null = null;
-  detectedAnswers: (Option | null)[] = [];
-  studentScore: number = -1;
-
-  examTitle: string = '';
-  subject: string = '';
-  studentName: string = '';
-  studentId: string = '';
-
-  answerKey: Option[] = ['D', 'A', 'C', 'B', 'A', 'A', 'D', 'B', 'C', 'D', 'A', 'B', 'C', 'D', 'A', 'A', 'B', 'C', 'D', 'A'];
-  bubbleRadius: number = 40;
-
-  showOverlayCanvas = true;
-  cvReady = false;
-
-  constructor(private http: HttpClient) {}
-
-  ngOnInit() {
-    const check = setInterval(() => {
-      if ((window as any).cv && (window as any).cv.imread) {
-        this.cvReady = true;
-        clearInterval(check);
-        console.log('✅ OpenCV.js ready');
-      }
-    }, 100);
-  }
-
-  async openCamera() {
-    const image = await Camera.getPhoto({
-      quality: 90,
-      allowEditing: false,
-      resultType: CameraResultType.DataUrl,
-      source: CameraSource.Camera,
-    });
-    this.previewImage = image.dataUrl!;
-  }
-
-  uploadImage(event: any) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.previewImage = reader.result as string;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  calculateScore(answers: (Option | null)[]) {
-    this.studentScore = answers.reduce((score, ans, i) =>
-      ans === this.answerKey[i] ? score + 1 : score, 0);
-    console.log('✅ Answers:', answers);
-    console.log('🎯 Score:', this.studentScore);
-  }
-
-  async processImage() {
-    if (!this.previewImage || !this.cvReady) {
-      alert('❌ Image or OpenCV not ready.');
-      return;
-    }
-
-    const cv = (window as any).cv;
-    const img = new Image();
-    img.src = this.previewImage;
-
-    img.onload = () => {
-      const src = cv.imread(img);
-      const gray = new cv.Mat();
-      const blurred = new cv.Mat();
-      const edged = new cv.Mat();
-      const contours = new cv.MatVector();
-      const hierarchy = new cv.Mat();
-      const canvas = this.overlayCanvas.nativeElement;
-      canvas.width = src.cols;
-      canvas.height = src.rows;
-      const ctx = canvas.getContext('2d')!;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-
-      try {
-        // 1. Edge Detection and Contour Finding
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-        cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-        cv.Canny(blurred, edged, 50, 150);
-        cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-        const boxes = [];
-        for (let i = 0; i < contours.size(); i++) {
-          const cnt = contours.get(i);
-          if (cv.contourArea(cnt) < 1000) continue;
-          const rotated = cv.minAreaRect(cnt);
-          const points = cv.RotatedRect.points(rotated).map((pt: any) => ({ x: pt.x, y: pt.y }));
-          boxes.push({ points, area: cv.contourArea(cnt) });
-        }
-
-        const top4 = boxes.sort((a, b) => b.area - a.area).slice(0, 4);
-        if (top4.length < 4) {
-          alert('❌ Not enough corner markers detected.');
-          return;
-        }
-
-        const centers = top4.map(b => this.getBoxCenter(b.points));
-        const sortedCorners = this.sortCorners(centers, src.cols, src.rows);
-
-        // 2. Perspective Correction
-        const flat = sortedCorners.flatMap(p => [p.x, p.y]);
-        const srcCoords = cv.matFromArray(4, 1, cv.CV_32FC2, flat);
-        const dstSize = new cv.Size(1000, 1414);
-        const dstCoords = cv.matFromArray(4, 1, cv.CV_32FC2, [
-          0, 0,
-          dstSize.width, 0,
-          dstSize.width, dstSize.height,
-          0, dstSize.height
-        ]);
-
-
-        // 3. Detect Bubbles
-        this.detectedAnswers = bubbles.map((row, qIdx) => {
-          let maxVal = -Infinity;
-          let selected: Option | null = null;
-
-          for (const opt of ['A', 'B', 'C', 'D'] as Option[]) {
-            const bubble = row.options[opt];
-            const x = Math.max(0, bubble.cx - this.bubbleRadius);
-            const y = Math.max(0, bubble.cy - this.bubbleRadius);
-
-
-            try {
-
-              const grayROI = new cv.Mat();
-              cv.cvtColor( grayROI, cv.COLOR_RGBA2GRAY);
-              const mean = cv.mean(grayROI)[0];
-              if (255 - mean > maxVal && 255 - mean > 30) {
-                maxVal = 255 - mean;
-                selected = opt;
-              }
-              grayROI.delete();
-            } catch (e) {
-              console.warn(`⚠️ ROI error Q${qIdx + 1}${opt}:`, e);
-            }
-          }
-
-          return selected;
-        });
-
-        this.calculateScore(this.detectedAnswers);
-
-        // 4. Draw Overlay
-        cv.imshow(canvas);
-        ctx.font = '24px Arial';
-        this.detectedAnswers.forEach((ans, i) => {
-          const correct = this.answerKey[i];
-          const color = ans === correct ? 'green' : ans ? 'red' : 'yellow';
-          const bubble = bubbles[i].options[ans ?? 'A'];
-          ctx.beginPath();
-          ctx.arc(bubble.cx, bubble.cy, this.bubbleRadius, 0, 2 * Math.PI);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 4;
-          ctx.stroke();
-        });
-
-        // 5. Cleanup
-        [src, gray, blurred, edged, contours, hierarchy, srcCoords, dstCoords].forEach(m => m.delete());
-
-      } catch (err) {
-        console.error('❌ Processing error:', err);
-      }
-    };
-  }
+export class testprocessingPage implements AfterViewInit {
+  @ViewChild('canvas', { static: false }) canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('video', { static: false }) videoRef!: ElementRef<HTMLVideoElement>;
 
   
 
-  extractName(text: string): string {
-    const match = text.match(/Name\s*:\s*(.*)/i);
-    return match ? match[1].trim() : '';
+  BASE_URL = 'https://examscannerbackend-production.up.railway.app';
+
+  studentPercentage: number = 0;
+  classAveragePercentage: number = 0;
+  showCamera = false;
+  showCroppedImage = false;
+  croppedImageUrl: string | null = null;
+  cropOpacity = 1;
+  score: number = 0;
+  results: any[] = [];
+  answerKey: Record<number, 'A' | 'B' | 'C' | 'D' | 'E'> = {};
+  detectionBoxes = [
+    { x: 0, y: 0, width: 150, height: 150 },
+    { x: 0, y: 380, width: 150, height: 150 },
+    { x: 330, y: 0, width: 150, height: 150 },
+    { x: 330, y: 380, width: 150, height: 150 }
+  ];
+
+  detectedContours: any;
+  isSheetScanned: boolean = false;
+  answers: any[] = [];
+  total: number = 0; // <== Add this
+  detectedAnswers: { [questionNumber: string]: string | null } = {}; // <== Add this
+
+  hasResults: boolean = false; // Already added for View Results button
+  examTitle!: string;
+  subject!: string;
+  gradeLevel!: string;
+  teacherId: string = '1'; // Replace with dynamic user ID later
+
+  goToResultViewer() {
+    // navigate with state like in your earlier code
+    this.router.navigate(['/resultviewer'], {
+      state: {
+        score: this.score,
+        total: this.total,
+        answers: this.detectedAnswers,
+        answerKey: this.answerKey,
+      },
+    });
   }
 
-  extractId(text: string): string {
-    const match = text.match(/ID\s*:\s*(\d+)/i);
-    return match ? match[1].trim() : '';
+  constructor(
+    private resultService: ResultService,
+    private ngZone: NgZone,
+    private platform: Platform,
+    private router: Router,
+    private http: HttpClient,
+    private navCtrl: NavController,
+    private route: ActivatedRoute
+  ) {}
+
+  ngAfterViewInit() {
+    if (typeof cv === 'undefined') {
+      console.error('OpenCV.js is not loaded!');
+      return;
+    }
+
+    this.route.queryParams.subscribe(params => {
+      this.examTitle = params['examTitle'];
+      this.subject = params['subject'];
+      this.gradeLevel = params['gradeLevel'];
+      this.fetchAnswerKey();
+    });
   }
 
-  getBoxCenter(points: { x: number, y: number }[]): { x: number, y: number } {
-    const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
-    return { x: sum.x / 4, y: sum.y / 4 };
+  onStartCameraButtonClick() {
+    this.showCamera = true;
+    setTimeout(() => this.startCameraView(), 0);
   }
 
-  sortCorners(points: { x: number, y: number }[], width: number, height: number) {
-    const topLeft = points.reduce((a, b) => a.x + a.y < b.x + b.y ? a : b);
-    const bottomRight = points.reduce((a, b) => a.x + a.y > b.x + b.y ? a : b);
-    const topRight = points.reduce((a, b) => a.x - a.y > b.x - b.y ? a : b);
-    const bottomLeft = points.reduce((a, b) => a.y - a.x > b.y - b.x ? a : b);
-    return [topLeft, topRight, bottomRight, bottomLeft];
+  startCameraView() {
+    if (!this.videoRef?.nativeElement) {
+      alert('Video element not ready');
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      }
+    }).then((stream) => {
+      const video = this.videoRef.nativeElement;
+      video.srcObject = stream;
+      video.play();
+      video.onloadedmetadata = () => {
+        video.width = 640;
+        video.height = 480;
+        this.processVideo();
+      };
+    }).catch((err) => {
+      console.error('Camera error:', err);
+      alert('Error accessing camera: ' + err.message);
+    });
   }
+
+  fetchAnswerKey() {
+    this.http.get<AnswerSheet[]>(`${this.BASE_URL}/answer-sheets`, {
+      params: {
+        teacher_id: this.teacherId,
+        exam_title: this.examTitle,
+        subject: this.subject,
+        grade_level: this.gradeLevel
+      }
+    }).subscribe((sheets: AnswerSheet[]) => {
+      console.log(sheets);
+  
+      if (sheets.length > 0) {
+        const answerSheet = sheets[0]; // You can also let user choose if needed
+        this.answerKey = {};
+  
+        answerSheet.questions.forEach((q) => {
+          this.answerKey[q.questionNumber] = q.answer;
+        });
+  
+        console.log('Answer key loaded:', this.answerKey);
+      } else {
+        console.warn('No matching answer sheet found.');
+      }
+    }, error => {
+      console.error('Error fetching answer key:', error);
+    });
+  }
+  
+  drawDetectionBoxes(ctx: CanvasRenderingContext2D, width: number, height: number) {
+    ctx.save();
+    ctx.globalAlpha = 1.0;
+    this.detectionBoxes.forEach(box => {
+      ctx.strokeStyle = 'lime';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(box.x, box.y, box.width, box.height);
+    });
+    ctx.restore();
+  }
+
+  isRectInsideDetectionBoxes(rect: { x: number; y: number; width: number; height: number }) {
+    return this.detectionBoxes.some(box => {
+      return (
+        rect.x >= box.x &&
+        rect.y >= box.y &&
+        rect.x + rect.width <= box.x + box.width &&
+        rect.y + rect.height <= box.y + box.height
+      );
+    });
+  }
+
+  drawBubbleOverlay(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.lineWidth = 2;
+    const circleRadius = 20;
+    bubbles.forEach((bubble: BubbleTemplate, index) => {
+      let filledCount = 0;
+      let correctAnswer = this.answerKey[index + 1];
+      let filledOption: Option | null = null;
+
+      for (const option in bubble.options) {
+        const opt = option as Option;
+        const { cx, cy } = bubble.options[opt];
+        const filled = this.isBubbleFilled(ctx, bubble, opt);
+
+        if (filled) {
+          filledCount++;
+          filledOption = opt;
+        }
+
+        let color = 'blue';
+        if (filledCount > 1) color = 'red';
+        else if (filledOption === correctAnswer) color = 'green';
+        else if (filledOption && filledOption !== correctAnswer) color = 'red';
+        else if (!filledOption && correctAnswer === opt) color = 'yellow';
+
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.arc(cx, cy, circleRadius, 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+    });
+    ctx.restore();
+  }
+
+  isBubbleFilled(ctx: CanvasRenderingContext2D, bubble: any, option: string): boolean {
+    const radius = 10; // adjust depending on bubble size
+    const { x, y } = bubble.options[option];
+    const imageData = ctx.getImageData(x - radius, y - radius, radius * 2, radius * 2);
+    let sum = 0;
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      const r = imageData.data[i];
+      const g = imageData.data[i + 1];
+      const b = imageData.data[i + 2];
+      const brightness = (r + g + b) / 3;
+      sum += brightness;
+    }
+    const averageBrightness = sum / (imageData.data.length / 4);
+    return averageBrightness < 150; // threshold: lower = darker = filled
+  }
+  
+
+  scoreSheet(ctx: CanvasRenderingContext2D) {
+    let score = 0;
+    const results = bubbles.map((bubble, index) => {
+      let correct = 0;
+      let incorrect = 0;
+      for (const option in bubble.options) {
+        const opt = option as Option;
+        if (this.isBubbleFilled(ctx, bubble, opt)) {
+          const correctAnswer = this.answerKey[index + 1];
+          if (correctAnswer === opt) {
+            correct++;
+            score++;
+          } else {
+            incorrect++;
+          }
+        }
+      }
+      return { question: index + 1, correct, incorrect };
+    });
+
+    this.score = score;
+
+    this.router.navigate(['/resultviewer'], {
+      state: {
+        image: this.croppedImageUrl,
+        results: results
+      }
+    });
+  }
+  processVideo() {
+    try {
+        const video = this.videoRef.nativeElement;
+        const canvas = this.canvasRef.nativeElement;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.error('Could not get canvas context');
+            return;
+        }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+    const gray = new cv.Mat();
+    const blurred = new cv.Mat();
+    const edges = new cv.Mat();
+    const contours = new cv.MatVector();
+    const hierarchy = new cv.Mat();
+
+    const FPS = 10;
+    let stopped = false;
+
+    const process = () => {
+      if (stopped) return;
+      if (!video || video.readyState < 2) {
+        requestAnimationFrame(process);
+        return;
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      this.drawDetectionBoxes(ctx, canvas.width, canvas.height);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      src.data.set(imageData.data);
+
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+      cv.Canny(blurred, edges, 75, 150);
+      cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+      let detectedBoxes = new Array(this.detectionBoxes.length).fill(false);
+
+      for (let i = 0; i < contours.size(); i++) {
+        const cnt = contours.get(i);
+        const approx = new cv.Mat();
+        cv.approxPolyDP(cnt, approx, 0.02 * cv.arcLength(cnt, true), true);
+
+        if (approx.rows === 4 && cv.contourArea(approx) > 250 && cv.isContourConvex(approx)) {
+          const rect = cv.boundingRect(approx);
+
+          this.detectionBoxes.forEach((box, idx) => {
+            if (
+              rect.x >= box.x &&
+              rect.y >= box.y &&
+              rect.x + rect.width <= box.x + box.width &&
+              rect.y + rect.height <= box.y + box.height
+            ) {
+              detectedBoxes[idx] = true;
+              ctx.save();
+              ctx.strokeStyle = 'red';
+              ctx.lineWidth = 4;
+              ctx.globalAlpha = 0.7;
+              ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+              ctx.fillStyle = 'rgba(255,0,0,0.2)';
+              ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+              ctx.restore();
+            }
+          });
+        }
+
+        approx.delete();
+        cnt.delete();
+      }
+
+      // In the processVideo function, when all boxes are detected:
+      if (detectedBoxes.every(v => v) && !this.croppedImageUrl) {
+          stopped = true;
+          this.showCamera = false;  // Hide the camera view
+          // Stop the camera stream
+          if (this.videoRef.nativeElement.srcObject) {
+              const stream = this.videoRef.nativeElement.srcObject as MediaStream;
+              stream.getTracks().forEach(track => track.stop());
+          }
+          this.detectAndCropPaper();
+          return;
+      }
+
+      requestAnimationFrame(process);
+    };
+
+    requestAnimationFrame(process);
+    } catch (error) {
+        console.error('Error in processVideo:', error);
+    }
+    }
+
+    detectAndCropPaper() {
+      const canvas = this.canvasRef.nativeElement;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+    
+      // Create a temporary canvas for a clean snapshot
+      const tempSnapshotCanvas = document.createElement('canvas');
+      tempSnapshotCanvas.width = canvas.width;
+      tempSnapshotCanvas.height = canvas.height;
+      const tempCtx = tempSnapshotCanvas.getContext('2d');
+      if (!tempCtx) return;
+    
+      const video = this.videoRef.nativeElement;
+      tempCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+      let src = cv.imread(tempSnapshotCanvas);
+      let dst = new cv.Mat();
+    
+      const FIXED_WIDTH = 800;
+      const FIXED_HEIGHT = Math.round(FIXED_WIDTH * 1.414); // A4 ratio
+    
+      // Top-left, top-right, bottom-right, bottom-left order
+      let srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        this.detectionBoxes[0].x, this.detectionBoxes[0].y,
+        this.detectionBoxes[2].x + this.detectionBoxes[2].width, this.detectionBoxes[2].y,
+        this.detectionBoxes[3].x + this.detectionBoxes[3].width, this.detectionBoxes[3].y + this.detectionBoxes[3].height,
+        this.detectionBoxes[1].x, this.detectionBoxes[1].y + this.detectionBoxes[1].height
+      ]);
+    
+      let dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        0, 0,
+        FIXED_WIDTH, 0,
+        FIXED_WIDTH, FIXED_HEIGHT,
+        0, FIXED_HEIGHT
+      ]);
+    
+      let M = cv.getPerspectiveTransform(srcPoints, dstPoints);
+      let dsize = new cv.Size(FIXED_WIDTH, FIXED_HEIGHT);
+      cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+    
+      // Show result
+      const outputCanvas = document.createElement('canvas');
+      outputCanvas.width = FIXED_WIDTH;
+      outputCanvas.height = FIXED_HEIGHT;
+      cv.imshow(outputCanvas, dst);
+      this.croppedImageUrl = outputCanvas.toDataURL('image/jpeg');
+      this.showCroppedImage = true;
+    
+      // Overlay bubbles and score answers
+      const ctxCropped = outputCanvas.getContext('2d');
+      if (ctxCropped) {
+        this.drawBubbleOverlay(ctxCropped); // Draws the template bubble overlay
+        this.scoreSheet(ctxCropped);        // Detects filled bubbles and scores
+      }
+    
+      // Cleanup
+      src.delete(); dst.delete(); M.delete(); srcPoints.delete(); dstPoints.delete();
+    }
+    
+    calculateResults(ctx: CanvasRenderingContext2D) {
+      let score = 0;
+      const results = [];
+    
+      const totalQuestions = bubbles.length;
+      const totalPossibleScore = totalQuestions;
+    
+      for (let i = 0; i < bubbles.length; i++) {
+        const bubble = bubbles[i];
+        const correctAnswer = this.answerKey[bubble.question];
+        let markedAnswer: string | null = null;
+    
+        for (const option in bubble.options) {
+          if (this.isBubbleFilled(ctx, bubble, option)) {
+            markedAnswer = option;
+            break;
+          }
+        }
+    
+        const isCorrect = markedAnswer === correctAnswer;
+        if (isCorrect) score++;
+    
+        results.push({
+          question: bubble.question,
+          marked: markedAnswer,
+          correctAnswer: correctAnswer,
+          correct: isCorrect
+        });
+      }
+    
+      const studentPercentage = (score / totalPossibleScore) * 100;
+    
+      // === Placeholder: Replace with actual class average later ===
+      const classScores = [85, 76, 92, 88]; // Example
+      const classAveragePercentage = classScores.reduce((a, b) => a + b, 0) / classScores.length;
+    
+      this.score = score;
+      this.results = results;
+    
+      // Log or store it for use in result viewer
+      this.studentPercentage = studentPercentage;
+      this.classAveragePercentage = classAveragePercentage;
+    
+      console.log('Score:', score);
+      console.log('Student %:', studentPercentage);
+      console.log('Class Avg %:', classAveragePercentage);
+    
+      return results;
+    }
+    
+    reset() {
+        this.showCamera = false;
+        this.showCroppedImage = false;
+        this.croppedImageUrl = null;
+        if (this.videoRef && this.videoRef.nativeElement && this.videoRef.nativeElement.srcObject) {
+          const stream = this.videoRef.nativeElement.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+          this.videoRef.nativeElement.srcObject = null;
+        }
+      }
 }
+
+

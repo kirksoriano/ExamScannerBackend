@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { BubbleTemplate, Option } from '../data/bubble-template'; // Import BubbleTemplate and Option
 
 declare var cv: any; // Declare cv to avoid TypeScript errors
 
@@ -23,6 +24,7 @@ export class AnswerPage implements OnInit {
   numQuestions = 0;
   questions: any[] = [];
   answerOptions = ['A', 'B', 'C', 'D', 'True', 'False'];
+  
 
   answerSheets: any[] = [];
   selectedAnswerSheet: any = null;
@@ -52,11 +54,39 @@ export class AnswerPage implements OnInit {
     this.getAnswerSheets();
   }
 
+  answerKey: Record<number, 'A' | 'B' | 'C' | 'D'> = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' }; // Example answer key
+  // Ensure this matches the actual answer sheet format
+
   generateAnswerFields() {
     this.questions = Array.from({ length: this.numQuestions }, (_, i) => ({
       questionNumber: i + 1,
       answer: ''
     }));
+    
+  }
+
+  // Ensure that BubbleTemplate and Option are correctly imported
+  
+  isBubbleFilled(ctx: CanvasRenderingContext2D, bubble: BubbleTemplate, option: Option): boolean {
+    // Use the correct type for Option
+
+// Use the correct type for Option
+    const filledOption: Option | null = null;
+
+    const { cx, cy, radius } = bubble.options[option];
+    const imageData = ctx.getImageData(cx - radius, cy - radius, radius * 2, radius * 2);
+    let filledPixels = 0;
+    const totalPixels = radius * radius * Math.PI;
+    const threshold = 0.4; // Adjust this value to ensure darkness
+
+    for (let i = 0; i < imageData.data.length; i += 4) {
+        const brightness = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
+        if (brightness < 100) { // Adjust this value to ensure darkness
+            filledPixels++;
+        }
+    }
+
+    return (filledPixels / totalPixels) > threshold;
   }
   
   saveAnswerSheet() {
@@ -209,8 +239,15 @@ export class AnswerPage implements OnInit {
         }
       }
     );
-  }
   
+  this.router.navigate(['/test-processing'], {
+    queryParams: {
+      examTitle: this.examTitle,
+      subject: this.subject,
+      gradeLevel: this.gradeLevel
+    }
+  });
+}
   
   
 
@@ -222,3 +259,4 @@ export class AnswerPage implements OnInit {
     this.questions = [];
   }
 }
+

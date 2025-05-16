@@ -5,6 +5,48 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-  <h2>Final Cropped Image</h2>
-  <img *ngIf="image" [src]="image" style="width: 100%; border: 1px solid #ccc;" />
+
+  <div *ngIf="image">
+    <h2>Scanned Answer Sheet</h2>
+    <img [src]="image" alt="Scanned Test Paper" style="max-width: 100%; height: auto;" />
+  </div>
+
+  <h2>Performance Summary</h2>
+  <ion-card>
+    <ion-card-content>
+      <p><strong>Student Score:</strong> {{ studentPercentage.toFixed(2) }}%</p>
+      <p><strong>Class Average:</strong> {{ classPercentage.toFixed(2) }}%</p>
+      <p><strong>Mean Percentage (Current Paper):</strong> {{ meanPercentage.toFixed(2) }}%</p>
+    </ion-card-content>
+  </ion-card>
+
+  <h3>Answer Distribution per Question</h3>
+  <canvas id="answersChart" height="250"></canvas>
+  <h3 style="margin-top: 2rem;">Detailed Answer Distribution Table</h3>
+  <ion-grid>
+    <ion-row>
+      <ion-col><strong>Question</strong></ion-col>
+      <ion-col><strong>A</strong></ion-col>
+      <ion-col><strong>B</strong></ion-col>
+      <ion-col><strong>C</strong></ion-col>
+      <ion-col><strong>D</strong></ion-col>
+    </ion-row>
+    <ion-row *ngFor="let q of sortedQuestions">
+      <ion-col>{{ q }}</ion-col>
+      <ion-col>{{ studentAnswers[q]['A'] }}</ion-col>
+      <ion-col>{{ studentAnswers[q]['B'] }}</ion-col>
+      <ion-col>{{ studentAnswers[q]['C'] }}</ion-col>
+      <ion-col>{{ studentAnswers[q]['D'] }}</ion-col>
+      <ion-col>{{ studentAnswers[q]['E'] }}</ion-col>
+      <ion-col>
+        <ion-icon
+          [name]="studentAnswers[q]['selected'] === answerKey[q] ? 'checkmark-circle' : 'close-circle'"
+          [color]="studentAnswers[q]['selected'] === answerKey[q] ? 'success' : 'danger'">
+        </ion-icon>
+      </ion-col>
+    </ion-row>
+    
+    
+  </ion-grid>
+  
 </ion-content>
