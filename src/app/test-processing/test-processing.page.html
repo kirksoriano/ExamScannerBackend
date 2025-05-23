@@ -1,25 +1,34 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/teacher-dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>SCANNER</ion-title>
+  </ion-toolbar>
+</ion-header>
 <ion-content>
   <div style="display: flex; flex-direction: column; align-items: center; margin-top: 16px;">
     <ion-button *ngIf="!showCamera" (click)="onStartCameraButtonClick()">Start Camera</ion-button>
     <ion-button *ngIf="showCamera && !showCroppedImage" color="danger" (click)="reset()">Reset</ion-button>
-    
-    <!-- Button to view detailed analysis after scanning -->
-    <ion-button *ngIf="hasResults" (click)="goToResultViewer()">
-      View Results
-    </ion-button>
   </div>
 
   <!-- Show camera preview while scanning -->
   <div *ngIf="showCamera && !showCroppedImage" style="position: relative;">
     <video #video autoplay playsinline></video>
-    <canvas #canvas></canvas>
+    <canvas #canvas [width]="canvasWidth" [height]="canvasHeight" style="max-width: 100%; border: 1px solid #ccc; margin-bottom: 16px;"></canvas>
   </div>
 
-  <!-- Show cropped image and score after scan -->
-  <div *ngIf="showCroppedImage && croppedImageUrl" style="display: flex; flex-direction: column; align-items: center; margin-top: 24px;">
-    <div *ngIf="score !== null">Score: {{ score }}</div>
-    <h2>Cropped Document</h2>
-    <img [src]="croppedImageUrl" alt="Cropped Document" style="max-width: 480px; border: 2px solid #4caf50; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);" />
+  <!-- Show cropped image and overlays after scan -->
+  <div *ngIf="showCroppedImage" style="display: flex; flex-direction: column; align-items: center; margin-top: 24px;">
+    <h2>Cropped Document with Overlays</h2>
+    <canvas #canvas [width]="canvasWidth" [height]="canvasHeight" style="position: absolute; left: 0; top: 0; z-index: 2; max-width: 100%; border: 1px solid #ccc; margin-bottom: 16px;"></canvas>
+    <p *ngIf="score !== null">Score: {{ score }}</p>
     <ion-button color="primary" style="margin-top: 16px;" (click)="reset()">Scan Another</ion-button>
+    <ion-button *ngIf="hasResults" expand="full" color="success" (click)="goToResultViewer()">
+      View Result
+    </ion-button>
   </div>
+
+  <canvas id="resultsChart" width="400" height="200"></canvas>
+  <canvas id="answersChart" width="400" height="200"></canvas>
 </ion-content>

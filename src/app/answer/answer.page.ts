@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BubbleTemplate, Option } from '../data/bubble-template'; // Import BubbleTemplate and Option
+import { BubbleTemplate, Option, bubbles, BubbleCoordinate } from '../data/bubble-template'; // Import BubbleTemplate and Option
 
 declare var cv: any; // Declare cv to avoid TypeScript errors
 
@@ -16,7 +16,7 @@ declare var cv: any; // Declare cv to avoid TypeScript errors
   imports: [CommonModule, FormsModule, IonicModule]
 })
 export class AnswerPage implements OnInit {
-  BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app'
+  BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
 
 
   examTitle = '';
@@ -66,14 +66,7 @@ export class AnswerPage implements OnInit {
     
   }
 
-  // Ensure that BubbleTemplate and Option are correctly imported
-  
   isBubbleFilled(ctx: CanvasRenderingContext2D, bubble: BubbleTemplate, option: Option): boolean {
-    // Use the correct type for Option
-
-// Use the correct type for Option
-    const filledOption: Option | null = null;
-
     const { cx, cy, radius } = bubble.options[option];
     const imageData = ctx.getImageData(cx - radius, cy - radius, radius * 2, radius * 2);
     let filledPixels = 0;
@@ -135,48 +128,6 @@ export class AnswerPage implements OnInit {
         alert("Failed to fetch answer sheets.");
       }
     );
-  }
-  
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.processImage(file);
-    }
-  }
-
-  processImage(file: File) {
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = this.canvas.nativeElement;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          canvas.width = img.width;
-          canvas.height = img.height;
-          ctx.drawImage(img, 0, 0, img.width, img.height);
-
-          const src = cv.imread(canvas);
-          const gray = new cv.Mat();
-          cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-
-          const thresh = new cv.Mat();
-          cv.threshold(gray, thresh, 150, 255, cv.THRESH_BINARY_INV);
-
-          const circles = new cv.Mat();
-          cv.HoughCircles(thresh, circles, cv.HOUGH_GRADIENT, 1, 20, 100, 30, 10, 30);
-
-          console.log('Detected circles:', circles.data32F);
-
-          src.delete();
-          gray.delete();
-          thresh.delete();
-          circles.delete();
-        }
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
   }
 
   editAnswerSheet(answerSheet: any) {
@@ -241,14 +192,12 @@ export class AnswerPage implements OnInit {
       }
     );
   
-  this.router.navigate(['/test-processing'], {
-    queryParams: {
-      examTitle: this.examTitle,
-      subject: this.subject,
-      gradeLevel: this.gradeLevel
-    }
-  });
-}
+    this.router.navigate(['/test-processing'], {
+      queryParams: {
+        answerSheetId: this.selectedAnswerSheet.id
+      }
+    });
+  }
   
   
 

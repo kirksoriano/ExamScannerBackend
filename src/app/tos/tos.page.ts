@@ -30,6 +30,7 @@ export class TosPage {
       evaluating: 0,
       creating: 0,
       totalNoOfItems: 0,
+      questionsToGenerate: 1, // New field: default to 1
     });
   }
 
@@ -46,6 +47,7 @@ export class TosPage {
       (row.analyzing || 0) +
       (row.evaluating || 0) +
       (row.creating || 0);
+      (row.questionsToGenerate || 0);
   }
 
   generateQuestions() {
@@ -73,6 +75,7 @@ export class TosPage {
           <td>${row.evaluating ?? 0}</td>
           <td>${row.creating ?? 0}</td>
           <td>${row.totalNoOfItems ?? 0}</td>
+          <td>${row.questionsToGenerate ?? 1}</td>
         </tr>
       `)
       .join('');
@@ -116,6 +119,7 @@ export class TosPage {
                 <th>Evaluating</th>
                 <th>Creating</th>
                 <th>Total No. of Items</th>
+                <th># of Questions</th>
               </tr>
             </thead>
             <tbody>
@@ -136,4 +140,5 @@ export class TosPage {
       printWindow.close();
     }
   }
+  
 }

@@ -6,7 +6,7 @@ import { IonicModule } from '@ionic/angular';
 
 import { TestProcessingPageRoutingModule } from './test-processing-routing.module';
 
-import { testprocessingPage } from './test-processing.page';
+import { TestProcessingPage } from './test-processing.page';
 
 @NgModule({
   imports: [
@@ -14,7 +14,7 @@ import { testprocessingPage } from './test-processing.page';
     FormsModule,
     IonicModule,
     TestProcessingPageRoutingModule,
-    RouterModule.forChild([{ path: '', component: testprocessingPage }])
+    RouterModule.forChild([{ path: '', component: TestProcessingPage }])
   ]
 })
 export class TestProcessingPageModule {}

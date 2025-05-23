@@ -78,3 +78,9 @@ canvas#overlayCanvas {
   z-index: 10;
   pointer-events: none;
 }
+.scanned-image {
+  max-width: 100%;
+  height: auto;
+  border: 2px solid #444;
+  margin-top: 10px;
+}

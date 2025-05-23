@@ -1,41 +1,24 @@
-<!-- question-generator.page.html -->
-
 <ion-header>
   <ion-toolbar>
-    <!-- Back button to return to TosPage -->
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tos"></ion-back-button>
+      <ion-back-button defaultHref="/teacher-dashboard"></ion-back-button>
     </ion-buttons>
-    <ion-title>Question Generator</ion-title>
+    <ion-title>Generated Questions</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <!-- Question Type Selection -->
-  <ion-item>
-    <ion-label>Question Type</ion-label>
-    <ion-select [(ngModel)]="selectedQuestionType">
-      <ion-select-option value="mcq">Multiple Choice</ion-select-option>
-      <ion-select-option value="truefalse">True/False</ion-select-option>
-    </ion-select>
-  </ion-item>
+<ion-content class="ion-padding">
+  <ion-textarea [(ngModel)]="inputText" placeholder="Enter your passage or topic here..."></ion-textarea>
 
-  <!-- Number of Questions -->
-  <ion-item>
-    <ion-label>Number of Questions</ion-label>
-    <ion-input type="number" [(ngModel)]="numOfQuestions"></ion-input>
-  </ion-item>
+  <ion-button expand="full" (click)="generateQuestions()">Generate Questions</ion-button>
 
-  <!-- Generate Questions Button -->
-  <ion-button (click)="generateQuestions()">Generate Questions</ion-button>
+  <ion-spinner *ngIf="loading" name="dots"></ion-spinner>
 
-  <!-- Display Generated Questions -->
-  <ion-list>
-    <ion-item *ngFor="let question of generatedQuestions">
-      <ion-label>{{ question.question }}</ion-label>
-      <ion-select [(ngModel)]="question.selectedAnswer">
-        <ion-select-option *ngFor="let option of question.options" [value]="option">{{ option }}</ion-select-option>
-      </ion-select>
+  <ion-list *ngIf="questions.length > 0">
+    <ion-item *ngFor="let question of questions">
+      {{ question.question }}
     </ion-item>
   </ion-list>
+
+  <ion-text color="danger" *ngIf="errorMessage">{{ errorMessage }}</ion-text>
 </ion-content>
