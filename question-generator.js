@@ -1,8 +1,8 @@
-// question-generator.js
+require('dotenv').config(); // Load env variables
+
 const axios = require('axios');
 
-// Replace with your actual Hugging Face token (keep secret!)
-const HUGGING_FACE_TOKEN = 'hf_xxx'; // put your real token here
+const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
 
 const generateQuestion = async (competencyText) => {
   try {
@@ -10,9 +10,7 @@ const generateQuestion = async (competencyText) => {
 
     const response = await axios.post(
       'https://api-inference.huggingface.co/models/google/mt5-small',
-      {
-        inputs: prompt,
-      },
+      { inputs: prompt },
       {
         headers: {
           Authorization: `Bearer ${HUGGING_FACE_TOKEN}`,
@@ -26,10 +24,5 @@ const generateQuestion = async (competencyText) => {
     return null;
   }
 };
-
-// Example usage
-generateQuestion('Paggamit ng wastong pang-ukol sa pangungusap').then((output) => {
-  console.log('Generated:', output);
-});
 
 module.exports = generateQuestion;

@@ -70,6 +70,7 @@
 
   <!-- Printable Table (for printing only) -->
   <div class="table-wrapper print-only">
+    <ion-button color="primary" (click)="goBack()" style="margin-bottom: 16px;">Back</ion-button>
     <div class="table-container">
       <h2 style="text-align: center;">{{ subjectTitle }}</h2>
       <table class="tos-table">
@@ -107,9 +108,17 @@
     </div>
   </div>
 
+  <!-- Save TOS Button -->
+<ion-button expand="block" color="primary" (click)="saveTOS()">
+  Save TOS
+</ion-button>
+
+
   <!-- Generate Questions Button -->
   <ion-button expand="block" color="success" (click)="generateQuestions()">
     Generate Questions
   </ion-button>
+
+
 
 </ion-content>

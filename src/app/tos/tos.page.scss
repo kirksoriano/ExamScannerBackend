@@ -51,4 +51,19 @@
     padding: 8px;
     text-align: center;
   }
+
+  .print-only ion-button {
+    display: none !important;
+  }
+}
+.print-only table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-only th,
+.print-only td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
 }

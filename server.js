@@ -12,6 +12,10 @@ const PORT = process.env.PORT || 5001;
 const HF_API_URL = 'https://api-inference.huggingface.co/models/valhalla/t5-base-qg-hl';
 const HF_API_KEY = process.env.HF_API_KEY;
 
+app.use(cors());
+app.use(express.json()); // this enables JSON body parsing
+
+
 // Ensure the JWT_SECRET is loaded properly
 if (!process.env.JWT_SECRET) {
     console.error("❌ JWT_SECRET is missing.");
@@ -50,7 +54,7 @@ app.use(cors({
 app.use(express.json());
 
 
-app.post('/generate-question', async (req, res) => {
+app.post('/question-generator', async (req, res) => {
   try {
     const { text } = req.body;
 
@@ -375,8 +379,137 @@ app.post('/answer-sheets', async (req, res) => {
       res.status(500).json({ message: 'Server error' });
     }
   });
-  
-  
+    
+
+// Create new TOS (with table_data)
+app.post('/tos', async (req, res) => {
+  const { teacherId, tosTitle, subject, totalItems, table_data } = req.body;
+
+  if (!teacherId || !tosTitle || !subject) {
+    return res.status(400).json({ error: 'Missing required fields: teacherId, tosTitle, or subject' });
+  }
+
+  try {
+    const [result] = await db.execute(
+      `INSERT INTO tos (teacher_id, tos_title, subject, total_items, table_data) VALUES (?, ?, ?, ?, ?)`,
+      [teacherId, tosTitle, subject, totalItems || 0, JSON.stringify(table_data)]
+    );
+    res.status(201).json({ id: result.insertId, message: 'TOS created successfully' });
+  } catch (err) {
+    console.error('Error creating TOS:', err);
+    res.status(500).json({ error: 'Server error while creating TOS' });
+  }
+});
+
+// Get all TOS for a teacher
+app.get('/tos', async (req, res) => {
+  const teacherId = req.query.teacherId;
+  if (!teacherId) return res.status(400).json({ error: 'Missing teacherId query parameter' });
+
+  try {
+    const [rows] = await db.execute('SELECT * FROM tos WHERE teacher_id = ?', [teacherId]);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching TOS:', err);
+    res.status(500).json({ error: 'Server error while fetching TOS' });
+  }
+});
+
+// Get one TOS by id (with its items)
+app.get('/tos/:id', async (req, res) => {
+  const tosId = req.params.id;
+  try {
+    const [tosRows] = await db.execute('SELECT * FROM tos WHERE id = ?', [tosId]);
+    if (tosRows.length === 0) return res.status(404).json({ error: 'TOS not found' });
+
+    const [items] = await db.execute('SELECT * FROM tos_items WHERE tos_id = ?', [tosId]);
+    res.json({ tos: tosRows[0], items });
+  } catch (err) {
+    console.error('Error fetching TOS:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update TOS (including table_data)
+app.put('/tos/:id', async (req, res) => {
+  const tosId = req.params.id;
+  const { tosTitle, subject, totalItems, table_data } = req.body;
+  try {
+    const [result] = await db.execute(
+      'UPDATE tos SET tos_title = ?, subject = ?, total_items = ?, table_data = ? WHERE id = ?',
+      [tosTitle, subject, totalItems, JSON.stringify(table_data), tosId]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'TOS not found' });
+    res.json({ message: 'TOS updated successfully' });
+  } catch (err) {
+    console.error('Error updating TOS:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete TOS and cascade delete items
+app.delete('/tos/:id', async (req, res) => {
+  const tosId = req.params.id;
+  try {
+    const [result] = await db.execute('DELETE FROM tos WHERE id = ?', [tosId]);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'TOS not found' });
+    res.json({ message: 'TOS deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting TOS:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Add TOS Item
+app.post('/tos/:tosId/items', async (req, res) => {
+  const tosId = req.params.tosId;
+  const { domain, learningOutcome, numberOfItems } = req.body;
+  if (!domain || !learningOutcome || numberOfItems === undefined) {
+    return res.status(400).json({ error: 'Missing required fields: domain, learningOutcome, numberOfItems' });
+  }
+
+  try {
+    const [result] = await db.execute(
+      `INSERT INTO tos_items (tos_id, domain, learning_outcome, number_of_items) VALUES (?, ?, ?, ?)`,
+      [tosId, domain, learningOutcome, numberOfItems]
+    );
+    res.status(201).json({ id: result.insertId, message: 'TOS Item added' });
+  } catch (err) {
+    console.error('Error adding TOS Item:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update TOS Item
+app.put('/tos/items/:itemId', async (req, res) => {
+  const itemId = req.params.itemId;
+  const { domain, learningOutcome, numberOfItems } = req.body;
+  try {
+    const [result] = await db.execute(
+      `UPDATE tos_items SET domain = ?, learning_outcome = ?, number_of_items = ? WHERE id = ?`,
+      [domain, learningOutcome, numberOfItems, itemId]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'TOS Item not found' });
+    res.json({ message: 'TOS Item updated successfully' });
+  } catch (err) {
+    console.error('Error updating TOS Item:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete TOS Item
+app.delete('/tos/items/:itemId', async (req, res) => {
+  const itemId = req.params.itemId;
+  try {
+    const [result] = await db.execute('DELETE FROM tos_items WHERE id = ?', [itemId]);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'TOS Item not found' });
+    res.json({ message: 'TOS Item deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting TOS Item:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.get('/routes-check', (req, res) => {
     res.json({
       message: "Routes check",

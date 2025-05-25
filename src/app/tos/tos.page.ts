@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, NavController } from '@ionic/angular';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 
 @Component({
@@ -14,8 +15,79 @@ import { Router } from '@angular/router';
 export class TosPage {
   tableData: any[] = [];
   subjectTitle: string = '';
+  teacherId: any;
+  BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private http: HttpClient, private navCtrl: NavController) {}
+
+  ngOnInit() {
+  const userData = localStorage.getItem('userData');
+  if (!userData) {
+    this.navCtrl.navigateRoot('/home');  // redirect if not logged in
+    return;
+  }
+  const user = JSON.parse(userData);
+  this.teacherId = user.id;
+  console.log('✅ Teacher ID loaded:', this.teacherId);
+}
+
+  saveTOS() {
+  if (!this.teacherId) {
+    alert('Teacher not logged in.');
+    return;
+  }
+
+  // Step 1: Save main TOS entry
+  const mainTosData = {
+    teacherId: this.teacherId,
+    tosTitle: this.subjectTitle,
+    subject: this.subjectTitle, // or separate input if needed
+    totalItems: this.tableData.reduce((sum, row) => sum + (row.totalNoOfItems || 0), 0),
+  };
+
+  this.http.post(`${this.BASE_URL}/tos`, mainTosData).subscribe(
+    (response: any) => {
+      const tosId = response.insertId || response.id;
+
+      // Step 2: Save each row into tos_items with the new tosId
+      const tosItemsRequests = this.tableData.map((row) => {
+        return this.http.post(`${this.BASE_URL}/tos-items`, {
+          tosId: tosId,
+          topic: row.learningCompetencies,
+          items: row.totalNoOfItems || 0,
+          learningCompetency: row.learningCompetencies,
+          noOfDays: row.noOfDays,
+          percentage: row.percentage,
+          noOfItems: row.noOfItems,
+          remembering: row.remembering,
+          understanding: row.understanding,
+          applying: row.applying,
+          analyzing: row.analyzing,
+          evaluating: row.evaluating,
+          creating: row.creating,
+          totalNoOfItems: row.totalNoOfItems,
+          questionsToGenerate: row.questionsToGenerate || 1
+        });
+      });
+
+      // Wait for all items to be saved
+      Promise.all(tosItemsRequests.map(req => req.toPromise())).then(() => {
+        alert('✅ Table of Specification and items saved successfully!');
+      }).catch((err) => {
+        console.error('❌ Error saving TOS items:', err);
+        alert('Some items may have failed to save.');
+      });
+
+    },
+    error => {
+      console.error('❌ Error saving main TOS:', error);
+      alert('Failed to save Table of Specification.');
+    }
+  );
+}
+
+
+
 
   addRow() {
     this.tableData.push({
@@ -141,4 +213,7 @@ export class TosPage {
     }
   }
   
+  goBack() {
+    window.history.back();
+  }
 }
