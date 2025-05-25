@@ -496,6 +496,16 @@ export class TestProcessingPage implements AfterViewInit {
 
             // Determine the correct answer
             const correctAnswer = this.answerKey[index] as Option;
+            alert(`Question ${index + 1}: correctAnswer from answerKey is: ${correctAnswer}`);
+            if (bubble.options[correctAnswer]) {
+                alert(`Mapping found for correctAnswer '${correctAnswer}' in question ${index + 1}`);
+            } else {
+                alert(`No mapping found for correctAnswer '${correctAnswer}' in question ${index + 1}. bubble.options keys: ${Object.keys(bubble.options).join(', ')}`);
+            }
+        const validOptions = ['A', 'B', 'C', 'D'];
+        if (!validOptions.includes(correctAnswer)) {
+            alert(`Invalid correctAnswer '${correctAnswer}' at question ${index + 1}. Check your answerKey source.`);
+        }
         
             // Draw overlays based on correctness
             filledOptions.forEach((option: Option) => {

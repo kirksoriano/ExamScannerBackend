@@ -38,53 +38,51 @@ export class TosPage {
   }
 
   // Step 1: Save main TOS entry
-  const mainTosData = {
-    teacherId: this.teacherId,
-    tosTitle: this.subjectTitle,
-    subject: this.subjectTitle, // or separate input if needed
-    totalItems: this.tableData.reduce((sum, row) => sum + (row.totalNoOfItems || 0), 0),
-  };
+const mainTosData = {
+  teacherId: this.teacherId,
+  tosTitle: this.subjectTitle,
+  subject: this.subjectTitle, // or separate input if needed
+  totalItems: this.tableData.reduce((sum, row) => sum + (row.totalNoOfItems || 0), 0),
+};
 
-  this.http.post(`${this.BASE_URL}/tos`, mainTosData).subscribe(
-    (response: any) => {
-      const tosId = response.insertId || response.id;
+this.http.post(`${this.BASE_URL}/tos`, mainTosData).subscribe(
+  (response: any) => {
+    const tosId = response.insertId || response.id;
 
-      // Step 2: Save each row into tos_items with the new tosId
-      const tosItemsRequests = this.tableData.map((row) => {
-        return this.http.post(`${this.BASE_URL}/tos-items`, {
-          tosId: tosId,
-          topic: row.learningCompetencies,
-          items: row.totalNoOfItems || 0,
-          learningCompetency: row.learningCompetencies,
-          noOfDays: row.noOfDays,
-          percentage: row.percentage,
-          noOfItems: row.noOfItems,
-          remembering: row.remembering,
-          understanding: row.understanding,
-          applying: row.applying,
-          analyzing: row.analyzing,
-          evaluating: row.evaluating,
-          creating: row.creating,
-          totalNoOfItems: row.totalNoOfItems,
-          questionsToGenerate: row.questionsToGenerate || 1
-        });
+    // Step 2: Save each row into tos_items using the correct endpoint
+    const tosItemsRequests = this.tableData.map((row) => {
+      return this.http.post(`${this.BASE_URL}/tos/${tosId}/items`, {
+        topic: row.learningCompetencies,
+        items: row.totalNoOfItems || 0,
+        learningCompetency: row.learningCompetencies,
+        noOfDays: row.noOfDays,
+        percentage: row.percentage,
+        noOfItems: row.noOfItems,
+        remembering: row.remembering,
+        understanding: row.understanding,
+        applying: row.applying,
+        analyzing: row.analyzing,
+        evaluating: row.evaluating,
+        creating: row.creating,
+        totalNoOfItems: row.totalNoOfItems,
+        questionsToGenerate: row.questionsToGenerate || 1
       });
+    });
 
-      // Wait for all items to be saved
-      Promise.all(tosItemsRequests.map(req => req.toPromise())).then(() => {
-        alert('✅ Table of Specification and items saved successfully!');
-      }).catch((err) => {
-        console.error('❌ Error saving TOS items:', err);
-        alert('Some items may have failed to save.');
-      });
+    Promise.all(tosItemsRequests.map(req => req.toPromise())).then(() => {
+      alert('✅ Table of Specification and items saved successfully!');
+    }).catch((err) => {
+      console.error('❌ Error saving TOS items:', err);
+      alert('Some items may have failed to save.');
+    });
 
-    },
-    error => {
-      console.error('❌ Error saving main TOS:', error);
-      alert('Failed to save Table of Specification.');
-    }
-  );
-}
+  },
+  error => {
+    console.error('❌ Error saving main TOS:', error);
+    alert('Failed to save Table of Specification.');
+  }
+);
+  }
 
 
 

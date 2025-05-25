@@ -466,36 +466,131 @@ app.delete('/tos/:id', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
-
 // Add TOS Item
 app.post('/tos/:tosId/items', async (req, res) => {
   const tosId = req.params.tosId;
-  const { domain, learningOutcome, numberOfItems } = req.body;
-  if (!domain || !learningOutcome || numberOfItems === undefined) {
-    return res.status(400).json({ error: 'Missing required fields: domain, learningOutcome, numberOfItems' });
+  const {
+    topic,
+    items,
+    learningCompetency,
+    noOfDays,
+    percentage,
+    noOfItems,
+    remembering,
+    understanding,
+    applying,
+    analyzing,
+    evaluating,
+    creating,
+    totalNoOfItems,
+    questionsToGenerate
+  } = req.body;
+
+  if (!learningCompetency || totalNoOfItems === undefined) {
+    return res.status(400).json({ error: 'Missing required fields: learningCompetency, totalNoOfItems' });
   }
 
   try {
     const [result] = await db.execute(
-      `INSERT INTO tos_items (tos_id, domain, learning_outcome, number_of_items) VALUES (?, ?, ?, ?)`,
-      [tosId, domain, learningOutcome, numberOfItems]
+      `INSERT INTO tos_items (
+        tos_id,
+        topic,
+        items,
+        learning_competency,
+        no_of_days,
+        percentage,
+        no_of_items,
+        remembering,
+        understanding,
+        applying,
+        analyzing,
+        evaluating,
+        creating,
+        total_no_of_items,
+        questions_to_generate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        tosId,
+        topic,
+        items,
+        learningCompetency,
+        noOfDays,
+        percentage,
+        noOfItems,
+        remembering,
+        understanding,
+        applying,
+        analyzing,
+        evaluating,
+        creating,
+        totalNoOfItems,
+        questionsToGenerate
+      ]
     );
+
     res.status(201).json({ id: result.insertId, message: 'TOS Item added' });
   } catch (err) {
     console.error('Error adding TOS Item:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
-
 // Update TOS Item
 app.put('/tos/items/:itemId', async (req, res) => {
   const itemId = req.params.itemId;
-  const { domain, learningOutcome, numberOfItems } = req.body;
+  const {
+    topic,
+    items,
+    learningCompetency,
+    noOfDays,
+    percentage,
+    noOfItems,
+    remembering,
+    understanding,
+    applying,
+    analyzing,
+    evaluating,
+    creating,
+    totalNoOfItems,
+    questionsToGenerate
+  } = req.body;
+
   try {
     const [result] = await db.execute(
-      `UPDATE tos_items SET domain = ?, learning_outcome = ?, number_of_items = ? WHERE id = ?`,
-      [domain, learningOutcome, numberOfItems, itemId]
+      `UPDATE tos_items SET
+        topic = ?,
+        items = ?,
+        learning_competency = ?,
+        no_of_days = ?,
+        percentage = ?,
+        no_of_items = ?,
+        remembering = ?,
+        understanding = ?,
+        applying = ?,
+        analyzing = ?,
+        evaluating = ?,
+        creating = ?,
+        total_no_of_items = ?,
+        questions_to_generate = ?
+      WHERE id = ?`,
+      [
+        topic,
+        items,
+        learningCompetency,
+        noOfDays,
+        percentage,
+        noOfItems,
+        remembering,
+        understanding,
+        applying,
+        analyzing,
+        evaluating,
+        creating,
+        totalNoOfItems,
+        questionsToGenerate,
+        itemId
+      ]
     );
+
     if (result.affectedRows === 0) return res.status(404).json({ error: 'TOS Item not found' });
     res.json({ message: 'TOS Item updated successfully' });
   } catch (err) {
