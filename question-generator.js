@@ -9,11 +9,13 @@ const generateQuestion = async (competencyText) => {
     const prompt = `Gumawa ng isang tanong na multiple choice batay sa sumusunod na paksa: "${competencyText}". Isama ang tanong, 4 na pagpipilian, at ang tamang sagot.`;
 
     const response = await axios.post(
-      'https://api-inference.huggingface.co/models/google/mt5-small',
+      'https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct',
       { inputs: prompt },
       {
         headers: {
           Authorization: `Bearer ${HUGGING_FACE_TOKEN}`,
+          'Content-Type': 'application/json'
+
         },
       }
     );
