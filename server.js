@@ -53,29 +53,29 @@ app.use(cors({
 
 app.use(express.json());
 
+const generateQuestion = require('./question-generator'); // adjust path if needed
 
-app.post('/question-generator', async (req, res) => {
+app.post('/generate-question', async (req, res) => {
+  const { competencyText } = req.body;
+
+  if (!competencyText) {
+    return res.status(400).json({ error: 'Missing competencyText in request body' });
+  }
+
   try {
-    const { text } = req.body;
+    const questionData = await generateQuestion(competencyText);
 
-    const response = await axios.post(
-      HF_API_URL,
-      {
-        inputs: text,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${HF_API_KEY}`,
-        },
-      }
-    );
+    if (!questionData) {
+      return res.status(500).json({ error: 'Failed to generate question' });
+    }
 
-    res.json({ result: response.data });
+    res.json({ question: questionData });
   } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).json({ error: 'Failed to generate question' });
+    console.error('Route error (generate-question):', err);
+    res.status(500).json({ error: 'Server error while generating question' });
   }
 });
+
 // ✅ Register User
 // ✅ Register User
 app.post("/register", async (req, res) => {
@@ -380,7 +380,6 @@ app.post('/answer-sheets', async (req, res) => {
     }
   });
     
-
 // Create new TOS (with table_data)
 app.post('/tos', async (req, res) => {
   const { teacherId, tosTitle, subject, totalItems, table_data } = req.body;
@@ -389,10 +388,18 @@ app.post('/tos', async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields: teacherId, tosTitle, or subject' });
   }
 
+  let tableDataJSON = null;
+  try {
+    tableDataJSON = table_data ? JSON.stringify(table_data) : JSON.stringify([]);
+  } catch (jsonErr) {
+    console.error('Invalid table_data format:', jsonErr);
+    return res.status(400).json({ error: 'Invalid table_data format' });
+  }
+
   try {
     const [result] = await db.execute(
       `INSERT INTO tos (teacher_id, tos_title, subject, total_items, table_data) VALUES (?, ?, ?, ?, ?)`,
-      [teacherId, tosTitle, subject, totalItems || 0, JSON.stringify(table_data)]
+      [teacherId, tosTitle, subject, totalItems || 0, tableDataJSON]
     );
     res.status(201).json({ id: result.insertId, message: 'TOS created successfully' });
   } catch (err) {
