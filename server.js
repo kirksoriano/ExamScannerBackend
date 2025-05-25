@@ -53,28 +53,35 @@ app.use(cors({
 
 app.use(express.json());
 
-const generateQuestion = require('./question-generator'); // adjust path if needed
+require('dotenv').config(); // Load env variables
+const axios = require('axios');
 
-app.post('/generate-question', async (req, res) => {
-  const { competencyText } = req.body;
+const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
 
-  if (!competencyText) {
-    return res.status(400).json({ error: 'Missing competencyText in request body' });
-  }
-
+const generateQuestion = async (competencyText) => {
   try {
-    const questionData = await generateQuestion(competencyText);
+    const prompt = `Gumawa ng isang tanong na multiple choice batay sa sumusunod na paksa: "${competencyText}". Isama ang tanong, 4 na pagpipilian, at ang tamang sagot.`;
 
-    if (!questionData) {
-      return res.status(500).json({ error: 'Failed to generate question' });
-    }
+    const response = await axios.post(
+      'https://api-inference.huggingface.co/models/bigscience/bloom-560m', // TEMP fallback model
+      { inputs: prompt },
+      {
+        headers: {
+          Authorization: `Bearer ${HUGGING_FACE_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    res.json({ question: questionData });
-  } catch (err) {
-    console.error('Route error (generate-question):', err);
-    res.status(500).json({ error: 'Server error while generating question' });
+    return response.data;
+  } catch (error) {
+    console.error('Error generating question:', error.response?.data || error.message);
+    return null;
   }
-});
+};
+
+module.exports = generateQuestion;
+
 
 // ✅ Register User
 // ✅ Register User

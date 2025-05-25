@@ -495,53 +495,28 @@ export class TestProcessingPage implements AfterViewInit {
             }
 
             // Determine the correct answer
-            // FIX: Use index + 1 to match answerKey's questionNumber
-            const correctAnswer = this.answerKey[index + 1] as Option;
-            alert(`Question ${index + 1}: correctAnswer from answerKey is: ${correctAnswer}`);
-            if (bubble.options[correctAnswer]) {
-                alert(`Mapping found for correctAnswer '${correctAnswer}' in question ${index + 1}`);
-            } else {
-                alert(`No mapping found for correctAnswer '${correctAnswer}' in question ${index + 1}. bubble.options keys: ${Object.keys(bubble.options).join(', ')}`);
-            }
-        const validOptions = ['A', 'B', 'C', 'D'];
-        if (!validOptions.includes(correctAnswer)) {
-            alert(`Invalid correctAnswer '${correctAnswer}' at question ${index + 1}. Check your answerKey source.`);
-        }
+            const correctAnswer = this.answerKey[index] as Option;
         
             // Draw overlays based on correctness
             filledOptions.forEach((option: Option) => {
-                // When iterating through bubbles and options:
-                const validOptions = ['A', 'B', 'C', 'D'];
-                
-                bubbles.forEach((bubble, i) => {
-                    filledOptions.forEach(option => {
-                        const filledBubbleCoordinate = bubble.options[option];
-                        if (!filledBubbleCoordinate || filledBubbleCoordinate.cx === undefined || filledBubbleCoordinate.cy === undefined || filledBubbleCoordinate.radius === undefined) {
-                            alert(`Missing or malformed filledBubbleCoordinate for option ${option} in question ${i + 1}`);
-                            return;
-                        }
-                        alert(`Mapping filled option: question ${i + 1}, option: ${option}, cx: ${filledBubbleCoordinate.cx}, cy: ${filledBubbleCoordinate.cy}, radius: ${filledBubbleCoordinate.radius}`);
-                        ctx.fillRect(
-                            filledBubbleCoordinate.cx - filledBubbleCoordinate.radius,
-                            filledBubbleCoordinate.cy - filledBubbleCoordinate.radius,
-                            filledBubbleCoordinate.radius * 2,
-                            filledBubbleCoordinate.radius * 2
-                        );
-                    });
-                    const correctBubbleCoordinate = bubble.options[correctAnswer];
-                    if (!correctBubbleCoordinate || correctBubbleCoordinate.cx === undefined || correctBubbleCoordinate.cy === undefined || correctBubbleCoordinate.radius === undefined) {
-                        alert(`Missing or malformed correctBubbleCoordinate for correctAnswer ${correctAnswer} in question ${i + 1}`);
-                        return;
-                    }
-                    alert(`Mapping correct answer: question ${i + 1}, correctAnswer: ${correctAnswer}, cx: ${correctBubbleCoordinate.cx}, cy: ${correctBubbleCoordinate.cy}, radius: ${correctBubbleCoordinate.radius}`);
-                    ctx.fillRect(
-                        correctBubbleCoordinate.cx - correctBubbleCoordinate.radius,
-                        correctBubbleCoordinate.cy - correctBubbleCoordinate.radius,
-                        correctBubbleCoordinate.radius * 2,
-                        correctBubbleCoordinate.radius * 2
-                    );
-                });
+                const bubbleCoordinate = bubble.options[option];
+                if (bubbleCoordinate && bubbleCoordinate.cx !== undefined && bubbleCoordinate.cy !== undefined && bubbleCoordinate.radius !== undefined) {
+                    ctx.fillRect(bubbleCoordinate.cx - bubbleCoordinate.radius, bubbleCoordinate.cy - bubbleCoordinate.radius, bubbleCoordinate.radius * 2, bubbleCoordinate.radius * 2);
+                }
+                if (option === correctAnswer) {
+                    ctx.fillStyle = 'green'; // Correct and filled
+                } else {
+                    ctx.fillStyle = 'red'; // Incorrect
+                }
+                // Draw the overlay
+                ctx.fillRect(bubbleCoordinate.cx - bubbleCoordinate.radius, bubbleCoordinate.cy - bubbleCoordinate.radius, bubbleCoordinate.radius * 2, bubbleCoordinate.radius * 2);
             });
+
+            if (!filledOptions.includes(correctAnswer)) {
+                const bubbleCoordinate = bubble.options[correctAnswer];
+                ctx.fillStyle = 'yellow'; // Correct but unfilled
+                ctx.fillRect(bubbleCoordinate.cx - bubbleCoordinate.radius, bubbleCoordinate.cy - bubbleCoordinate.radius, bubbleCoordinate.radius * 2, bubbleCoordinate.radius * 2);
+            }
         });
     }
 
