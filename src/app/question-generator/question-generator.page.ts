@@ -20,28 +20,29 @@ export class QuestionGeneratorPage {
   constructor(private http: HttpClient) {}
 
   generateQuestions() {
-    if (!this.inputText.trim()) {
-      this.errorMessage = 'Please enter some text.';
-      return;
-    }
-
-    this.loading = true;
-    this.errorMessage = '';
-    this.questions = [];
-
-    this.http.post<any>('https://examscannerbackend-production-7460.up.railway.app/generate-question', {
-      text: this.inputText,
-    }).subscribe({
-      next: (response) => {
-        // Assume HuggingFace response is an array of questions
-        this.questions = response.result;
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error(err);
-        this.errorMessage = 'Failed to generate questions.';
-        this.loading = false;
-      }
-    });
+  if (!this.inputText.trim()) {
+    this.errorMessage = 'Please enter a competency to generate questions from.';
+    return;
   }
+
+  this.loading = true;
+  this.errorMessage = '';
+  this.questions = [];
+
+  this.http.post<any>('https://examscannerbackend-production-7460.up.railway.app/generate-question', {
+    competencyText: this.inputText, // ✅ FIXED: changed from "text" to "competencyText"
+    questionCount: 3                // ✅ Optional: can be dynamic or fixed
+  }).subscribe({
+    next: (response) => {
+      this.questions = response.questions || response.result || []; // Just in case
+      this.loading = false;
+    },
+    error: (err) => {
+      console.error(err);
+      this.errorMessage = err?.error?.error || 'Failed to generate questions.';
+      this.loading = false;
+    }
+  });
+}
+
 }

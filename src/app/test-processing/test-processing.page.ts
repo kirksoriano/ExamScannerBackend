@@ -495,7 +495,8 @@ export class TestProcessingPage implements AfterViewInit {
             }
 
             // Determine the correct answer
-            const correctAnswer = this.answerKey[index] as Option;
+            // FIX: Use index + 1 to match answerKey's questionNumber
+            const correctAnswer = this.answerKey[index + 1] as Option;
             alert(`Question ${index + 1}: correctAnswer from answerKey is: ${correctAnswer}`);
             if (bubble.options[correctAnswer]) {
                 alert(`Mapping found for correctAnswer '${correctAnswer}' in question ${index + 1}`);
