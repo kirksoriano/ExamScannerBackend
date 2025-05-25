@@ -53,8 +53,6 @@ app.use(cors({
 
 app.use(express.json());
 
-require('dotenv').config(); // Load env variables
-const axios = require('axios');
 
 const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
 

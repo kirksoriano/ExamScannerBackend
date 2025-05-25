@@ -479,46 +479,34 @@ export class TestProcessingPage implements AfterViewInit {
         });
     }
   }
-    drawBubbleOverlay(ctx: CanvasRenderingContext2D) {
-        // Reset detected answers
-        this.detectedAnswers = {};
-    
-        // Iterate over each bubble
-        bubbles.forEach((bubble, index) => {
-            let filledOptions: Option[] = [];
-            for (const opt in bubble.options) {
-                const option = opt as Option;
-                const filled = this.isBubbleFilled(ctx, bubble, option);
-                if (filled) {
-                    filledOptions.push(option);
-                }
-            }
-
-            // Determine the correct answer
-            const correctAnswer = this.answerKey[index] as Option;
-        
-            // Draw overlays based on correctness
-            filledOptions.forEach((option: Option) => {
-                const bubbleCoordinate = bubble.options[option];
-                if (bubbleCoordinate && bubbleCoordinate.cx !== undefined && bubbleCoordinate.cy !== undefined && bubbleCoordinate.radius !== undefined) {
-                    ctx.fillRect(bubbleCoordinate.cx - bubbleCoordinate.radius, bubbleCoordinate.cy - bubbleCoordinate.radius, bubbleCoordinate.radius * 2, bubbleCoordinate.radius * 2);
-                }
-                if (option === correctAnswer) {
-                    ctx.fillStyle = 'green'; // Correct and filled
-                } else {
-                    ctx.fillStyle = 'red'; // Incorrect
-                }
-                // Draw the overlay
-                ctx.fillRect(bubbleCoordinate.cx - bubbleCoordinate.radius, bubbleCoordinate.cy - bubbleCoordinate.radius, bubbleCoordinate.radius * 2, bubbleCoordinate.radius * 2);
-            });
-
-            if (!filledOptions.includes(correctAnswer)) {
-                const bubbleCoordinate = bubble.options[correctAnswer];
-                ctx.fillStyle = 'yellow'; // Correct but unfilled
-                ctx.fillRect(bubbleCoordinate.cx - bubbleCoordinate.radius, bubbleCoordinate.cy - bubbleCoordinate.radius, bubbleCoordinate.radius * 2, bubbleCoordinate.radius * 2);
-            }
-        });
+  drawBubbleOverlay(ctx: CanvasRenderingContext2D) {
+    for (const result of this.results) {
+      const bubble = bubbles.find(b => b.question === result.question);
+      if (!bubble) continue;
+  
+      const radius = bubble.options.A.radius;
+  
+      // Mark selected bubble
+      if (result.marked) {
+        const coord = bubble.options[result.marked as Option]; // <-- FIXED
+        ctx.fillStyle = result.correct ? 'green' : 'red';
+        ctx.beginPath();
+        ctx.arc(coord.cx, coord.cy, radius, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+  
+      // If correct answer not marked
+      if (!result.correct && result.correctAnswer) {
+        const coord = bubble.options[result.correctAnswer as Option]; // <-- FIXED
+        ctx.fillStyle = 'yellow';
+        ctx.beginPath();
+        ctx.arc(coord.cx, coord.cy, radius, 0, 2 * Math.PI);
+        ctx.fill();
+      }
     }
+  }
+  
+  
 
     isBubbleFilled(ctx: CanvasRenderingContext2D, bubble: BubbleTemplate, option: Option): boolean {
         const { cx, cy, radius } = bubble.options[option] as BubbleCoordinate;
@@ -545,123 +533,48 @@ export class TestProcessingPage implements AfterViewInit {
         return (darkPixels / totalPixels) > FILL_PERCENT;
     
     }
-    extractAnswersFromCroppedImage(canvas: HTMLCanvasElement) {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-    
+    processSheet(ctx: CanvasRenderingContext2D) {
       this.detectedAnswers = {};
+      this.results = [];
       this.score = 0;
       this.total = bubbles.length;
     
-      bubbles.forEach((bubble, index) => {
+      for (const bubble of bubbles) {
+        const qNum = bubble.question;
+        const correctAnswer = this.answerKey[qNum];
         let selected: Option | null = null;
         let filledCount = 0;
     
         for (const opt in bubble.options) {
           const option = opt as Option;
-          const filled = this.isBubbleFilled(ctx, bubble, option);
-          if (filled) {
+          if (this.isBubbleFilled(ctx, bubble, option)) {
             filledCount++;
-            selected = option; // Ensure 'option' is of type 'Option'
+            selected = option;
           }
         }
     
-        const qNum = index + 1;
-        if (filledCount === 1) {
-          this.detectedAnswers[qNum.toString()] = selected!;
-          if (this.answerKey[qNum] === selected) {
-            this.score++;
-          }
-        } else {
-          this.detectedAnswers[qNum.toString()] = null;
+        const isCorrect = selected === correctAnswer;
+        if (filledCount === 1 && isCorrect) {
+          this.score++;
         }
-      });
     
-        alert('Answers: ' + JSON.stringify(this.detectedAnswers));
-        alert('Score: ' + this.score + ' / ' + this.total);
-        this.hasResults = true;
-        this.goToResultViewer();
-    }
-        
-    
-    
-  scoreSheet(ctx: CanvasRenderingContext2D) {
-    let score = 0;
-    const results = bubbles.map((bubble, index) => {
-      let correct = 0;
-      let incorrect = 0;
-      for (const option in bubble.options) {
-        const opt = option as Option;
-        if (this.isBubbleFilled(ctx, bubble, opt)) {
-          const correctAnswer = this.answerKey[index + 1];
-          if (correctAnswer === opt) {
-            correct++;
-            score++;
-          } else {
-            incorrect++;
-          }
-        }
-      }
-      return { question: index + 1, correct, incorrect };
-    });
-
-    this.score = score;
-
-    this.router.navigate(['/resultviewer'], {
-      state: {
-        image: this.croppedImageUrl,
-        results: results
-      }
-    });
-  }
-    calculateResults(ctx: CanvasRenderingContext2D) {
-      let score = 0;
-      const results = [];
-    
-      const totalQuestions = bubbles.length;
-      const totalPossibleScore = totalQuestions;
-    
-      for (let i = 0; i < bubbles.length; i++) {
-        const bubble = bubbles[i];
-        const correctAnswer = this.answerKey[bubble.question];
-        let markedAnswer: Option | null = null; // Ensure markedAnswer is of type Option
-
-        for (const option in bubble.options) {
-          if (this.isBubbleFilled(ctx, bubble, option as Option)) { // Cast option to Option
-            markedAnswer = option as Option; // Cast option to Option
-            break;
-          }
-        }
-
-        const isCorrect = markedAnswer === correctAnswer;
-        if (isCorrect) score++;
-
-        results.push({
-          question: bubble.question,
-          marked: markedAnswer,
-          correctAnswer: correctAnswer,
+        this.detectedAnswers[qNum.toString()] = filledCount === 1 ? selected : null;
+        this.results.push({
+          question: qNum,
+          marked: filledCount === 1 ? selected : null,
+          correctAnswer,
           correct: isCorrect
         });
       }
-
-      const studentPercentage = (score / totalPossibleScore) * 100;
-
-      // === Placeholder: Replace with actual class average later ===
-      const classScores = [85, 76, 92, 88]; // Example
-      const classAveragePercentage = classScores.reduce((a, b) => a + b, 0) / classScores.length;
     
-      this.score = score;
-      this.results = results;
+      this.studentPercentage = (this.score / this.total) * 100;
     
-      // Log or store it for use in result viewer
-      this.studentPercentage = studentPercentage;
-      this.classAveragePercentage = classAveragePercentage;
-
-      alert('Score: ' + this.score);
-      alert('Student %: ' + this.studentPercentage);
-      alert('Class Avg %: ' + this.classAveragePercentage);
-
-      return results;
+      // TEMP CLASS AVG - can be updated later
+      const classScores = [85, 76, 92, 88];
+      this.classAveragePercentage = classScores.reduce((a, b) => a + b, 0) / classScores.length;
+    
+      this.hasResults = true;
+      this.goToResultViewer();
     }
     
     reset() {
