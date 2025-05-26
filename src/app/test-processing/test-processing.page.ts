@@ -25,6 +25,16 @@ interface AnswerSheet {
   grade_level: string;
   questions: Question[];
 }
+interface Result {
+  question: number;
+  marked: Option | null;        // user marked answer
+  correctAnswer: Option | null; // correct answer from key
+  correct: boolean;             // is user answer correct?
+}
+
+function isOption(value: string | null): value is Option {
+  return value === 'A' || value === 'B' || value === 'C' || value === 'D';
+}
 
 @Component({
   selector: 'app-test-processing',
@@ -52,8 +62,7 @@ export class TestProcessingPage implements AfterViewInit {
   croppedImageUrl: string | null = null;
   cropOpacity = 1;
   score: number = 0;
-  results: any[] = [];
-  answerKey: Record<string, string> = {};
+  results: Result[] = [];
   detectionBoxes = [
     { x: 0, y: 0, width: 150, height: 150 },
     { x: 0, y: 380, width: 150, height: 150 },
@@ -71,6 +80,7 @@ export class TestProcessingPage implements AfterViewInit {
   subject!: string;
   gradeLevel!: string;
   teacherId: string = '1'; // Replace with actual teacher id
+  
 
   constructor(
     private resultService: ResultService,
@@ -127,22 +137,36 @@ export class TestProcessingPage implements AfterViewInit {
     });
   }
   answerSheets: AnswerSheet[] = [];
-  loadAnswerSheet(id: number) {
-    this.http.get(`${this.BASE_URL}/answer-sheets/${id}`).subscribe((sheet: any) => {
-        alert(`Loaded answer sheet: ${sheet.exam_title}`); // Alert the exam title
-        sheet.questions.forEach((q: any) => {
-            this.answerKey[q.questionNumber] = q.answer;
-        });
-        alert(`Answer key loaded for ${sheet.questions.length} questions`); // Alert the number of questions
-        // After loading the answer key, redraw overlays
-        const ctx = this.canvasRef?.nativeElement?.getContext('2d');
-        if (ctx) {
-            this.drawBubbleOverlay(ctx);
-        }
-    }, (error) => {
-        alert(`Error loading answer sheet: ${error.message}`); // Alert any errors
-    });
+answerKey: { [questionNumber: number]: string } = {}; // Ensure this exists
+
+loadAnswerSheet(id: number) {
+  this.http.get<AnswerSheet>(`${this.BASE_URL}/answer-sheets/${id}`).subscribe({
+    next: (sheet) => {
+      alert(`✅ Loaded answer sheet: ${sheet.exam_title}`);
+
+      // Clear existing answer key
+      this.answerKey = {};
+
+      // Load the actual answer key from the response
+      sheet.questions.forEach((q) => {
+        this.answerKey[q.questionNumber] = q.answer;
+      });
+
+      alert(`✅ Answer key loaded for ${sheet.questions.length} questions`);
+
+      // Draw overlay after answer key is ready
+      const ctx = this.canvasRef?.nativeElement?.getContext('2d');
+      if (ctx) {
+        this.drawBubbleOverlay(ctx);
+      }
+    },
+    error: (error) => {
+      alert(`❌ Error loading answer sheet: ${error.message}`);
+    }
+  });
 }
+
+
 
   getAnswerSheets() {
     if (!this.teacherId) {
@@ -443,22 +467,23 @@ export class TestProcessingPage implements AfterViewInit {
         cv.imshow(canvas, dst);
 
         // Get the context again after imshow
+        
         const overlayCtx = canvas.getContext('2d');
         if (overlayCtx) {
           // After cropping and perspective transform:
-          this.drawBubbleOverlay(overlayCtx); // <-- Call it here with the correct context
+
+      // 🧪 Show data before drawing overlay
+      alert('Loaded answer key: ' + JSON.stringify(this.answerKey));
+      alert('Results after processSheet: ' + JSON.stringify(this.results?.slice(0, 3))); // first 3 results for quick check
+
+      this.processSheet(overlayCtx);
+      this.drawBubbleOverlay(overlayCtx);  // Must come after drawing the image
+
+
           overlayCtx.font = 'bold 32px Arial';
           overlayCtx.fillStyle = 'black';
           overlayCtx.fillText(`Score: ${this.score} / ${this.total}`, 20, 50);
         }
-
-        // Now convert to image and display
-        //this.ngZone.run(() => {
-          //this.croppedImageUrl = canvas.toDataURL('image/png');
-          //this.showCroppedImage = true;
-          //this.cropOpacity = 1;
-          //this.hasResults = true;
-        //});
 
         // Clean up
         src.delete();
@@ -479,33 +504,60 @@ export class TestProcessingPage implements AfterViewInit {
         });
     }
   }
+
   drawBubbleOverlay(ctx: CanvasRenderingContext2D) {
+    if (!this.results || !bubbles) return;
+  
+    // Draw all bubbles in light gray (base layer)
+    for (const bubble of bubbles) {
+      for (const opt of ['A', 'B', 'C', 'D'] as Option[]) {
+        const coord = bubble.options[opt];
+        ctx.strokeStyle = 'gray';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(coord.cx, coord.cy, coord.radius, 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+    }
+  
+    // Draw overlays based on result
     for (const result of this.results) {
       const bubble = bubbles.find(b => b.question === result.question);
       if (!bubble) continue;
   
-      const radius = bubble.options.A.radius;
+      const { marked, correctAnswer, correct } = result;
   
-      // Mark selected bubble
-      if (result.marked) {
-        const coord = bubble.options[result.marked as Option]; // <-- FIXED
-        ctx.fillStyle = result.correct ? 'green' : 'red';
+      if (marked && correct) {
+        // ✅ Correct answer: GREEN
+        const coord = bubble.options[marked];
+        ctx.strokeStyle = 'green';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(coord.cx, coord.cy, radius, 0, 2 * Math.PI);
-        ctx.fill();
+        ctx.arc(coord.cx, coord.cy, coord.radius, 0, 2 * Math.PI);
+        ctx.stroke();
+      } else if (marked && !correct) {
+        // ❌ Wrong answer: RED
+        const coord = bubble.options[marked];
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(coord.cx, coord.cy, coord.radius, 0, 2 * Math.PI);
+        ctx.stroke();
       }
   
-      // If correct answer not marked
-      if (!result.correct && result.correctAnswer) {
-        const coord = bubble.options[result.correctAnswer as Option]; // <-- FIXED
-        ctx.fillStyle = 'yellow';
+      if (!marked && correctAnswer) {
+        // ⚠️ Unanswered but should have been answered: YELLOW
+        const coord = bubble.options[correctAnswer];
+        ctx.strokeStyle = 'yellow';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(coord.cx, coord.cy, radius, 0, 2 * Math.PI);
-        ctx.fill();
+        ctx.arc(coord.cx, coord.cy, coord.radius, 0, 2 * Math.PI);
+        ctx.stroke();
       }
     }
   }
   
+
   
 
     isBubbleFilled(ctx: CanvasRenderingContext2D, bubble: BubbleTemplate, option: Option): boolean {
@@ -541,7 +593,6 @@ export class TestProcessingPage implements AfterViewInit {
     
       for (const bubble of bubbles) {
         const qNum = bubble.question;
-        const correctAnswer = this.answerKey[qNum];
         let selected: Option | null = null;
         let filledCount = 0;
     
@@ -553,12 +604,19 @@ export class TestProcessingPage implements AfterViewInit {
           }
         }
     
-        const isCorrect = selected === correctAnswer;
-        if (filledCount === 1 && isCorrect) {
+        // Record detected answer
+        this.detectedAnswers[qNum.toString()] = filledCount === 1 ? selected : null;
+    
+        // Get correct answer from key and validate it
+        const correctAnswerRaw = this.answerKey[qNum]; // string
+        const correctAnswer: Option | null = isOption(correctAnswerRaw) ? correctAnswerRaw : null;
+    
+        const isCorrect = filledCount === 1 && selected !== null && selected === correctAnswer;
+    
+        if (isCorrect) {
           this.score++;
         }
     
-        this.detectedAnswers[qNum.toString()] = filledCount === 1 ? selected : null;
         this.results.push({
           question: qNum,
           marked: filledCount === 1 ? selected : null,

@@ -7,6 +7,14 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <ion-button expand="full" (click)="scan()">Scan Document</ion-button>
+
+
+<ion-content class="ion-padding">
+  <ion-select placeholder="Select an Answer Sheet" (ionChange)="onSheetSelect($event.detail.value)">
+    <ion-select-option *ngFor="let sheet of answerSheets" [value]="sheet.id">
+      {{ sheet.exam_title }} - {{ sheet.subject }} - Grade {{ sheet.grade_level }}
+    </ion-select-option>
+  </ion-select>
+
+  <canvas #overlayCanvas width="1000" height="1400" style="border:1px solid #ccc; margin-top: 20px;"></canvas>
 </ion-content>

@@ -305,25 +305,42 @@ app.delete('/students/:studentId', async (req, res) => {
 
 
 app.get('/answer-sheets', async (req, res) => {
-    const teacherId = req.query.teacher_id;
-  
-    if (!teacherId) {
-      return res.status(400).json({ message: 'Missing teacher_id in query' });
-    }
-  
-    try {
-      const [rows] = await db.execute(
-        'SELECT * FROM answer_sheets WHERE teacher_id = ?',
-        [teacherId]
-      );
-  
-      res.json(rows);
-    } catch (err) {
-      console.error('❌ Error fetching answer sheets:', err);
-      res.status(500).json({ message: 'Server error while fetching answer sheets' });
-    }
-  });
-  
+  const teacherId = req.query.teacher_id;
+
+  if (!teacherId) {
+    return res.status(400).json({ message: 'Missing teacher_id in query' });
+  }
+
+  try {
+    const [rows] = await db.execute(
+      'SELECT * FROM answer_sheets WHERE teacher_id = ?',
+      [teacherId]
+    );
+
+    // Parse the questions JSON string into objects
+    const parsedRows = rows.map(row => {
+      try {
+        return {
+          ...row,
+          questions: JSON.parse(row.questions)
+        };
+      } catch (err) {
+        // If parsing fails, just return original string or empty array
+        console.error('Error parsing questions JSON:', err);
+        return {
+          ...row,
+          questions: []
+        };
+      }
+    });
+
+    res.json(parsedRows);
+  } catch (err) {
+    console.error('❌ Error fetching answer sheets:', err);
+    res.status(500).json({ message: 'Server error while fetching answer sheets' });
+  }
+});
+
   
   // Save a new Answer Sheet
 app.post('/answer-sheets', async (req, res) => {

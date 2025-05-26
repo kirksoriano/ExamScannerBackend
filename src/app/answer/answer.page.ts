@@ -24,7 +24,8 @@ export class AnswerPage implements OnInit {
   gradeLevel = '';
   numQuestions = 0;
   questions: any[] = [];
-  answerOptions = ['A', 'B', 'C', 'D', 'True', 'False'];
+  answerOptions = ['A', 'B', 'C', 'D'];
+
   
 
   answerSheets: any[] = [];
