@@ -294,7 +294,6 @@ app.delete('/students/:studentId', async (req, res) => {
     }
 });
 
-
 // Get all answer sheets for a teacher
 app.get('/answer-sheets', async (req, res) => {
   const { teacher_id } = req.query;
@@ -309,19 +308,16 @@ app.get('/answer-sheets', async (req, res) => {
       [teacher_id]
     );
 
-    const parsedRows = rows.map(row => {
-      try {
-        return {
-          ...row,
-          questions: JSON.parse(row.questions)
-        };
-      } catch (err) {
-        return {
-          ...row,
-          questions: []
-        };
-      }
+    const toCamelCase = (row) => ({
+      id: row.id,
+      examTitle: row.exam_title,
+      subject: row.subject,
+      gradeLevel: row.grade_level,
+      questions: JSON.parse(row.questions || '[]'),
+      teacherId: row.teacher_id
     });
+
+    const parsedRows = rows.map(toCamelCase);
 
     res.json(parsedRows);
   } catch (err) {
@@ -391,7 +387,6 @@ app.delete('/answer-sheets/:id', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
     
 // Create new TOS (with table_data)
 app.post('/tos', async (req, res) => {

@@ -140,7 +140,6 @@ export class AnswerPage implements OnInit {
       questions: this.questions
     };
 
-
     this.http.put(`${this.BASE_URL}/answer-sheets/${this.selectedAnswerSheet.id}`, payload).subscribe(
       () => {
         alert('Answer sheet updated successfully!');
