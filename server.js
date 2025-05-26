@@ -294,7 +294,8 @@ app.delete('/students/:studentId', async (req, res) => {
     }
 });
 
-// Get all answer sheets for a teacher
+
+// Get all answer sheets for a teacher (with camelCase keys + parsed questions)
 app.get('/answer-sheets', async (req, res) => {
   const { teacher_id } = req.query;
 
@@ -308,16 +309,24 @@ app.get('/answer-sheets', async (req, res) => {
       [teacher_id]
     );
 
-    const toCamelCase = (row) => ({
-      id: row.id,
-      examTitle: row.exam_title,
-      subject: row.subject,
-      gradeLevel: row.grade_level,
-      questions: JSON.parse(row.questions || '[]'),
-      teacherId: row.teacher_id
-    });
+    const parsedRows = rows.map(row => {
+      let parsedQuestions = [];
 
-    const parsedRows = rows.map(toCamelCase);
+      try {
+        parsedQuestions = JSON.parse(row.questions || '[]');
+      } catch (err) {
+        console.warn(`⚠️ Failed to parse questions for answer sheet ID ${row.id}`);
+      }
+
+      return {
+        id: row.id,
+        examTitle: row.exam_title,
+        subject: row.subject,
+        gradeLevel: row.grade_level,
+        teacherId: row.teacher_id,
+        questions: parsedQuestions
+      };
+    });
 
     res.json(parsedRows);
   } catch (err) {
@@ -325,32 +334,33 @@ app.get('/answer-sheets', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
-  
-  // Save a new Answer Sheet
+
+
+// Save a new answer sheet
 app.post('/answer-sheets', async (req, res) => {
-    const { examTitle, subject, gradeLevel, questions, teacherId } = req.body;
-  
-    console.log('Received request body:', req.body);
-  
-    if (!teacherId || !examTitle || !subject || !gradeLevel || !questions) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-  
-    try {
-      const [result] = await db.execute(
-        'INSERT INTO answer_sheets (exam_title, subject, grade_level, questions, teacher_id) VALUES (?, ?, ?, ?, ?)',
-        [examTitle, subject, gradeLevel, JSON.stringify(questions), teacherId]
-      );
-  
-      res.json({ id: result.insertId, message: 'Answer sheet saved' });
-    } catch (err) {
-      console.error('❌ Error saving answer sheet:', err);
-      res.status(500).json({ message: 'Server error while saving answer sheet', error: err.message });
-    }
-  });
-  
-  
-// Update an existing answer sheet (camelCase keys for consistency)
+  const { examTitle, subject, gradeLevel, questions, teacherId } = req.body;
+
+  console.log('Received request body:', req.body);
+
+  if (!teacherId || !examTitle || !subject || !gradeLevel || !questions) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
+  try {
+    const [result] = await db.execute(
+      'INSERT INTO answer_sheets (exam_title, subject, grade_level, questions, teacher_id) VALUES (?, ?, ?, ?, ?)',
+      [examTitle, subject, gradeLevel, JSON.stringify(questions), teacherId]
+    );
+
+    res.json({ id: result.insertId, message: 'Answer sheet saved' });
+  } catch (err) {
+    console.error('❌ Error saving answer sheet:', err);
+    res.status(500).json({ message: 'Server error while saving answer sheet', error: err.message });
+  }
+});
+
+
+// Update an existing answer sheet
 app.put('/answer-sheets/:id', async (req, res) => {
   const { id } = req.params;
   const { examTitle, subject, gradeLevel, questions } = req.body;
@@ -371,9 +381,11 @@ app.put('/answer-sheets/:id', async (req, res) => {
   }
 });
 
-// Delete an answer sheet (fix destructuring of result)
+
+// Delete an answer sheet
 app.delete('/answer-sheets/:id', async (req, res) => {
   const { id } = req.params;
+
   try {
     const [result] = await db.query('DELETE FROM answer_sheets WHERE id = ?', [id]);
 
@@ -387,6 +399,8 @@ app.delete('/answer-sheets/:id', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+
     
 // Create new TOS (with table_data)
 app.post('/tos', async (req, res) => {

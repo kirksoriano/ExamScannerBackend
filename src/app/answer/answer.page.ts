@@ -12,6 +12,8 @@ import { Router } from '@angular/router';
   standalone: true,
   imports: [CommonModule, FormsModule, IonicModule]
 })
+// ...imports and decorator unchanged
+
 export class AnswerPage implements OnInit {
   BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
 
@@ -80,8 +82,6 @@ export class AnswerPage implements OnInit {
       teacherId: this.teacherId
     };
 
-    console.log('📦 Sending payload:', payload);
-
     this.http.post(`${this.BASE_URL}/answer-sheets`, payload).subscribe(
       () => {
         alert('Answer sheet saved successfully!');
@@ -100,16 +100,7 @@ export class AnswerPage implements OnInit {
 
     this.http.get(`${this.BASE_URL}/answer-sheets?teacher_id=${this.teacherId}`).subscribe(
       (response: any) => {
-        this.answerSheets = response.map((sheet: any) => ({
-          id: sheet.id,
-          examTitle: sheet.exam_title,
-          subject: sheet.subject,
-          gradeLevel: sheet.grade_level,
-          teacherId: sheet.teacher_id,
-          questions: typeof sheet.questions === 'string'
-            ? JSON.parse(sheet.questions)
-            : sheet.questions
-        }));
+        this.answerSheets = response;
       },
       error => {
         console.error('❌ Error fetching answer sheets:', error);
