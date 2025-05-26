@@ -53,7 +53,6 @@ app.use(cors({
 
 app.use(express.json());
 
-
 const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
 
 const generateQuestion = async (competencyText) => {
@@ -80,8 +79,6 @@ const generateQuestion = async (competencyText) => {
 
 module.exports = generateQuestion;
 
-
-// ✅ Register User
 // ✅ Register User
 app.post("/register", async (req, res) => {
     const { email, password, name } = req.body;
@@ -114,7 +111,6 @@ app.post("/register", async (req, res) => {
         return res.status(500).json({ message: "Server error during registration." });
     }
 });
-
 
 // ✅ Login User
 app.post('/login', async (req, res) => {
@@ -156,9 +152,6 @@ app.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
-
-
-
 
 // ✅ Fetch all classes for a specific teacher (using query parameter)
 app.get('/classes', async (req, res) => {
@@ -265,8 +258,6 @@ app.post('/students', async (req, res) => {
     }
 });
 
-
-
 // ✅ Edit student details
 app.put('/students/:studentId', async (req, res) => {
     const studentId = req.params.studentId;
@@ -338,8 +329,6 @@ app.get('/answer-sheets', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
-
-
   
   // Save a new Answer Sheet
 app.post('/answer-sheets', async (req, res) => {
@@ -365,41 +354,44 @@ app.post('/answer-sheets', async (req, res) => {
   });
   
   
-  app.put('/answer-sheets/:id', async (req, res) => {
-    const { id } = req.params;
-    const { exam_title, subject, grade_level, questions } = req.body;
-  
-    if (!exam_title || !subject || !grade_level || !questions) {
-      return res.status(400).json({ message: 'Missing required fields' });
+// Update an existing answer sheet (camelCase keys for consistency)
+app.put('/answer-sheets/:id', async (req, res) => {
+  const { id } = req.params;
+  const { examTitle, subject, gradeLevel, questions } = req.body;
+
+  if (!examTitle || !subject || !gradeLevel || !questions) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
+  try {
+    await db.query(
+      'UPDATE answer_sheets SET exam_title = ?, subject = ?, grade_level = ?, questions = ? WHERE id = ?',
+      [examTitle, subject, gradeLevel, JSON.stringify(questions), id]
+    );
+    res.status(200).json({ message: 'Answer sheet updated' });
+  } catch (error) {
+    console.error('❌ Error updating answer sheet:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete an answer sheet (fix destructuring of result)
+app.delete('/answer-sheets/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [result] = await db.query('DELETE FROM answer_sheets WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Answer sheet not found' });
     }
-  
-    try {
-      await db.query(
-        'UPDATE answer_sheets SET exam_title = ?, subject = ?, grade_level = ?, questions = ? WHERE id = ?',
-        [exam_title, subject, grade_level, JSON.stringify(questions), id]
-      );
-      res.status(200).json({ message: 'Answer sheet updated' });
-    } catch (error) {
-      console.error('❌ Error updating answer sheet:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
-  
-  
-  //delete
-  app.delete('/answer-sheets/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-      const result = await db.query('DELETE FROM answer_sheets WHERE id = ?', [id]);
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'Answer sheet not found' });
-      }
-      res.status(200).json({ message: 'Answer Sheet deleted' });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  });
+
+    res.status(200).json({ message: 'Answer sheet deleted' });
+  } catch (error) {
+    console.error('❌ Error deleting answer sheet:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
     
 // Create new TOS (with table_data)
 app.post('/tos', async (req, res) => {
@@ -429,17 +421,31 @@ app.post('/tos', async (req, res) => {
   }
 });
 
-// Get all TOS for a teacher
-app.get('/tos', async (req, res) => {
-  const teacherId = req.query.teacherId;
-  if (!teacherId) return res.status(400).json({ error: 'Missing teacherId query parameter' });
+// ✅ GET all answer sheets for a specific teacher
+app.get('/answer-sheets', async (req, res) => {
+  const { teacher_id } = req.query;
+
+  if (!teacher_id) {
+    return res.status(400).json({ message: 'Missing teacher_id' });
+  }
 
   try {
-    const [rows] = await db.execute('SELECT * FROM tos WHERE teacher_id = ?', [teacherId]);
-    res.json(rows);
+    const [rows] = await db.query('SELECT * FROM answer_sheets WHERE teacher_id = ?', [teacher_id]);
+
+    // Optional: Normalize keys to match frontend expectations (camelCase)
+    const formattedRows = rows.map(row => ({
+      id: row.id,
+      examTitle: row.exam_title,
+      subject: row.subject,
+      gradeLevel: row.grade_level,
+      questions: JSON.parse(row.questions),
+      teacherId: row.teacher_id
+    }));
+
+    res.json(formattedRows);
   } catch (err) {
-    console.error('Error fetching TOS:', err);
-    res.status(500).json({ error: 'Server error while fetching TOS' });
+    console.error('❌ Error fetching answer sheets:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -487,6 +493,7 @@ app.delete('/tos/:id', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 // Add TOS Item
 app.post('/tos/:tosId/items', async (req, res) => {
   const tosId = req.params.tosId;
@@ -555,6 +562,7 @@ app.post('/tos/:tosId/items', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 // Update TOS Item
 app.put('/tos/items/:itemId', async (req, res) => {
   const itemId = req.params.itemId;

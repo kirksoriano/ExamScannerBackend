@@ -8,8 +8,8 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-  <!-- Form for creating or updating an answer sheet -->
-  <form (submit)="selectedAnswerSheet ? updateAnswerSheet() : saveAnswerSheet()">
+  <!-- Answer Sheet Form -->
+  <form (ngSubmit)="selectedAnswerSheet ? updateAnswerSheet() : saveAnswerSheet()" #answerForm="ngForm">
     <ion-item>
       <ion-label position="floating">Exam Title</ion-label>
       <ion-input [(ngModel)]="examTitle" name="examTitle" required></ion-input>
@@ -25,43 +25,77 @@
       <ion-input [(ngModel)]="gradeLevel" name="gradeLevel" required></ion-input>
     </ion-item>
 
-    <ion-item>
-      <ion-label position="floating">Number of Questions</ion-label>
-      <ion-input type="number" [(ngModel)]="numQuestions" name="numQuestions" required 
-                 (ionChange)="generateAnswerFields()"></ion-input>
-    </ion-item>
+    <!-- Number of Questions + Generate Button -->
+    <ion-grid>
+      <ion-row class="ion-align-items-center">
+        <ion-col size="8">
+          <ion-item>
+            <ion-label position="floating">Number of Questions</ion-label>
+            <ion-input
+              type="number"
+              [(ngModel)]="numQuestions"
+              name="numQuestions"
+              required>
+            </ion-input>
+          </ion-item>
+        </ion-col>
+        <ion-col size="4">
+          <ion-button expand="block" color="medium" (click)="generateAnswerFields()" [disabled]="!numQuestions || numQuestions <= 0">
+            Generate
+          </ion-button>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
 
-    <div *ngFor="let question of questions; let i = index">
-      <ion-item>
-        <ion-label>Question {{ i + 1 }}</ion-label>
-        <ion-select [(ngModel)]="questions[i].answer" name="answer{{i}}">
-          <ion-select-option *ngFor="let option of answerOptions" [value]="option">
-            {{ option }}
-          </ion-select-option>
-        </ion-select>
-      </ion-item>
-    </div>
+    <!-- Answer Key Input -->
+    <ion-list *ngIf="questions.length > 0">
+      <ion-item-divider>
+        <ion-label>Answer Key</ion-label>
+      </ion-item-divider>
 
-    <ion-button expand="full" type="submit">{{ selectedAnswerSheet ? 'Update' : 'Save' }} Answer Sheet</ion-button>
+      <ion-grid>
+        <ion-row *ngFor="let question of questions; let i = index">
+          <ion-col size="8">
+            <ion-label class="ion-padding-start">Question {{ i + 1 }}</ion-label>
+          </ion-col>
+          <ion-col size="4">
+            <ion-select [(ngModel)]="questions[i].answer" name="questionAnswer{{i}}" interface="popover" required>
+              <ion-select-option *ngFor="let option of answerOptions" [value]="option">
+                {{ option }}
+              </ion-select-option>
+            </ion-select>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-list>
+
+    <ion-button expand="block" type="submit" class="ion-margin-top">
+      {{ selectedAnswerSheet ? 'Update' : 'Save' }} Answer Sheet
+    </ion-button>
   </form>
 
-  <!-- Display the list of saved answer sheets -->
-  <ion-list>
+  <!-- Saved Answer Sheets List -->
+  <ion-list *ngIf="answerSheets.length > 0" class="ion-margin-top">
+    <ion-item-divider>
+      <ion-label>Saved Answer Sheets</ion-label>
+    </ion-item-divider>
+
     <ion-item *ngFor="let sheet of answerSheets">
       <ion-label>
         <h2>{{ sheet.examTitle }}</h2>
-        <p>Subject: {{ sheet.subject }}</p>
-        <p>Grade Level: {{ sheet.gradeLevel }}</p>
-        <p>Questions:</p>
-        <ul>
+        <p><strong>Subject:</strong> {{ sheet.subject }}</p>
+        <p><strong>Grade Level:</strong> {{ sheet.gradeLevel }}</p>
+
+        <p><strong>Questions:</strong></p>
+        <ul style="margin-left: 1rem;">
           <li *ngFor="let question of sheet.questions">
-            Question {{ question.questionNumber }}: {{ question.answer }}
+            Q{{ question.questionNumber }}: {{ question.answer }}
           </li>
         </ul>
       </ion-label>
       <ion-buttons slot="end">
-        <ion-button (click)="editAnswerSheet(sheet)">Edit</ion-button>
-        <ion-button color="danger" (click)="deleteAnswerSheet(sheet.id)">Delete</ion-button>
+        <ion-button fill="outline" (click)="editAnswerSheet(sheet)">Edit</ion-button>
+        <ion-button color="danger" fill="outline" (click)="deleteAnswerSheet(sheet.id)">Delete</ion-button>
       </ion-buttons>
     </ion-item>
   </ion-list>
