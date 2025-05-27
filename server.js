@@ -25,11 +25,20 @@ const HF_API_KEY = process.env.HF_API_KEY;
 const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
 
 // Middleware
+const allowedOrigins = ['http://localhost:8100', 'https://your-production-frontend.com'];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

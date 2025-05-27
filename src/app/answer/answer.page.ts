@@ -60,4 +60,25 @@ export class AnswerPage {
       }
     );
   }
+
+  generateLayout() {
+  const url = 'https://examscannerbackend-production-7460.up.railway.app/answerSheets/generate-layout';
+
+  const body = {
+    subject: 'Math', // or use variables from a form/input
+    numberOfQuestions: 20,
+    optionsPerQuestion: 5
+  };
+
+  this.http.post(url, body).subscribe({
+    next: (response) => {
+      console.log('Generated layout:', response);
+      // Store or use the response however you need
+    },
+    error: (error) => {
+      console.error('Error generating layout:', error);
+    }
+  });
+}
+
 }
