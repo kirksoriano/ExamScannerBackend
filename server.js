@@ -17,7 +17,7 @@ const { generateLayout } = require('./utils/layoutGenerator');
 const { createAnswerSheetsPDF } = require('./routes/answerSheets'); // ✅ Do not change this
 
 const answerSheetsRoutes = require('./routes/answerSheets');
-app.use('/api/answerSheets', answerSheetsRoutes);
+app.use('/answerSheets', answerSheetsRoutes);
 
 const HF_API_URL = 'https://api-inference.huggingface.co/models/valhalla/t5-base-qg-hl';
 const HF_API_KEY = process.env.HF_API_KEY;
