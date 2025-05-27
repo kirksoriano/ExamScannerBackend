@@ -7,18 +7,4 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-textarea [(ngModel)]="inputText" placeholder="Enter your passage or topic here..."></ion-textarea>
-
-  <ion-button expand="full" (click)="generateQuestions()">Generate Questions</ion-button>
-
-  <ion-spinner *ngIf="loading" name="dots"></ion-spinner>
-
-  <ion-list *ngIf="questions.length > 0">
-    <ion-item *ngFor="let question of questions">
-      {{ question.question }}
-    </ion-item>
-  </ion-list>
-
-  <ion-text color="danger" *ngIf="errorMessage">{{ errorMessage }}</ion-text>
 </ion-content>

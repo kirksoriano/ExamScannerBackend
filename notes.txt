@@ -1,0 +1,349 @@
+//async detect(){
+  //let results = (await DocumentNormalizer.detect({source:this.dataURL})).results;
+  //if (results.length>0) {
+    //this.detectedQuadResult = results[0]; // Here, we only use the first detection result
+    //this.points = this.detectedQuadResult.location.points;
+  //}else {
+    //this.presentToast(); // Make a toast if there are no documents detected
+  //}
+//}
+
+//async presentToast(){
+  //const toast = await this.toastController.create({
+    //message: 'No documents detected.',
+    //duration: 1500,
+    //position: 'top'
+  //});
+  //await toast.present();
+//}
+
+
+generateQuestions() {
+  if (!this.inputText.trim()) {
+    this.errorMessage = 'Please enter a competency to generate questions from.';
+    return;
+  }
+
+  this.loading = true;
+  this.errorMessage = '';
+  this.questions = [];
+
+  this.http.post<any>('https://examscannerbackend-production-7460.up.railway.app/generate-question', {
+    competencyText: this.inputText, // ✅ FIXED: changed from "text" to "competencyText"
+    questionCount: 3                // ✅ Optional: can be dynamic or fixed
+  }).subscribe({
+    next: (response) => {
+      this.questions = response.questions || response.result || []; // Just in case
+      this.loading = false;
+    },
+    error: (err) => {
+      console.error(err);
+      this.errorMessage = err?.error?.error || 'Failed to generate questions.';
+      this.loading = false;
+    }
+  });
+  const readline = require('readline');
+
+
+questionTypes: string[];
+  difficultyLevels: { [key: string]: { min: number, max: number } };
+  numQuestions: number;
+  difficulty: string;
+  mixedTypes: boolean;
+
+    constructor() {
+      this.numQuestions = 10;
+      this.difficulty = 'medium';
+      this.questionTypes = ['addition', 'subtraction', 'multiplication', 'division'];
+      this.mixedTypes = true;
+        this.difficultyLevels = {
+            easy: { min: 1, max: 10 },
+            medium: { min: 10, max: 50 },
+            hard: { min: 50, max: 100 }
+        };
+    }
+
+    // Generate random number within range
+    getRandomNumber(min: number, max: number) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // Generate addition question
+    generateAddition(difficulty: string) {
+        const range = this.difficultyLevels[difficulty];
+        const num1 = this.getRandomNumber(range.min, range.max);
+        const num2 = this.getRandomNumber(range.min, range.max);
+        return {
+          question: `What is ${num1} + ${num2}?`,
+          answer: num1 + num2,
+          type: 'addition'
+      };
+    }
+      
+
+    // Generate subtraction question
+    generateSubtraction(difficulty: string) {
+        const range = this.difficultyLevels[difficulty];
+        let num1 = this.getRandomNumber(range.min, range.max);
+        let num2 = this.getRandomNumber(range.min, range.max);
+        
+        // Ensure positive result
+        if (num1 < num2) {
+            [num1, num2] = [num2, num1];
+        }
+        
+        return {
+          question: `What is ${num1} + ${num2}?`,
+          answer: num1 + num2,
+          type: 'subtraction'
+      };
+      
+      }
+    // Generate multiplication question
+    generateMultiplication(difficulty: string) {
+        const range = this.difficultyLevels[difficulty];
+        const num1 = this.getRandomNumber(range.min, Math.floor(range.max / 2));
+        const num2 = this.getRandomNumber(range.min, Math.floor(range.max / 2));
+        return {
+          question: `What is ${num1} + ${num2}?`,
+          answer: num1 + num2,
+          type: 'multiplication'
+      };
+      }
+
+    // Generate division question
+    generateDivision(difficulty: string) {
+        const range = this.difficultyLevels[difficulty];
+        const divisor = this.getRandomNumber(range.min, Math.floor(range.max / 2));
+        const quotient = this.getRandomNumber(range.min, Math.floor(range.max / 2));
+        const num1 = Math.floor(Math.random() * 100) + 1; // Avoid zero to prevent division by zero
+        const num2 = Math.floor(Math.random() * 10) + 1; // Avoid zero to prevent division by zero
+        const dividend = divisor * quotient;
+        
+        return {
+          question: `What is ${num1} + ${num2}?`,
+          answer: num1 + num2,
+          type: 'division'
+      };
+      }
+    
+
+    // Generate a single question based on type and difficulty
+    generateQuestion(type: string, difficulty: string) {
+        switch (type) {
+            case 'addition':
+                return this.generateAddition(difficulty);
+            case 'subtraction':
+                return this.generateSubtraction(difficulty);
+            case 'multiplication':
+                return this.generateMultiplication(difficulty);
+            case 'division':
+                return this.generateDivision(difficulty);
+            default:
+                throw new Error('Invalid question type');
+        }
+      }
+    
+
+    // Generate a complete questionnaire
+    generateQuestionnaire(options = {}) {
+        const {
+            numQuestions = 10,
+            difficulty = 'medium',
+            questionTypes = this.questionTypes,
+            mixedTypes = true
+        } = options;
+      
+        const questions = [];
+        
+        for (let i = 0; i < numQuestions; i++) {
+            let questionType;
+            
+            if (mixedTypes) {
+                questionType = questionTypes[Math.floor(Math.random() * questionTypes.length)];
+            } else {
+                questionType = questionTypes[0] || 'addition';
+            }
+            
+            const question = this.generateQuestion(questionType, difficulty);
+            question.id = i + 1;
+            questions.push(question);
+          }
+        
+        return {
+            title: Mathematics Questionnaire - ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} Level,
+            difficulty,
+            totalQuestions: numQuestions,
+            questions,
+            createdAt: new Date().toISOString()
+        };
+      
+
+    // Print questionnaire to console
+    printQuestionnaire(questionnaire) {
+        console.log('\n' + '='.repeat(50));
+        console.log(questionnaire.title);
+        console.log('='.repeat(50));
+        console.log(Total Questions: ${questionnaire.totalQuestions});
+        console.log(Difficulty: ${questionnaire.difficulty});
+        console.log(Created: ${new Date(questionnaire.createdAt).toLocaleString()});
+        console.log('='.repeat(50));
+
+        questionnaire.questions.forEach((q, index) => {
+            console.log(\n${index + 1}. ${q.question});
+        });
+
+        console.log('\n' + '='.repeat(50));
+        console.log('ANSWER KEY');
+        console.log('='.repeat(50));
+
+        questionnaire.questions.forEach((q, index) => {
+            console.log(${index + 1}. ${q.answer} (${q.type}));
+        });
+      }
+
+    // Interactive questionnaire
+    async runInteractiveQuestionnaire(questionnaire) {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        let score = 0;
+        const results = [];
+
+        console.log('\n' + '='.repeat(50));
+        console.log('INTERACTIVE QUESTIONNAIRE');
+        console.log('='.repeat(50));
+        console.log('Enter your answers. Type "quit" to exit.\n');
+
+        for (let i = 0; i < questionnaire.questions.length; i++) {
+            const question = questionnaire.questions[i];
+            
+            const answer = await new Promise((resolve) => {
+                rl.question(${i + 1}. ${question.question} , resolve);
+            });
+
+            if (answer.toLowerCase() === 'quit') {
+                break;
+            }
+
+            const userAnswer = parseFloat(answer);
+            const correct = userAnswer === question.answer;
+            
+            if (correct) {
+                score++;
+                console.log('✓ Correct!\n');
+            } else {
+                console.log(✗ Incorrect. The answer is ${question.answer}\n);
+            }
+
+            results.push({
+                question: question.question,
+                userAnswer,
+                correctAnswer: question.answer,
+                correct
+            });
+        
+
+        rl.close();
+
+        // Show final results
+        console.log('='.repeat(50));
+        console.log('FINAL RESULTS');
+        console.log('='.repeat(50));
+        console.log(Score: ${score}/${results.length} (${Math.round((score/results.length) * 100)}%));
+        
+        if (score === results.length) {
+            console.log('🎉 Perfect score! Excellent work!');
+        } else if (score >= results.length * 0.) {
+            console.log('👏 Great job! Keep up the good work!');
+        } else if (score >= results.length * 0.6) {
+            console.log('👍 Good effort! Keep practicing!');
+        } else {
+            console.log('💪 Keep practicing! You\'ll improve with time!');
+        }
+
+        return { score, total: results.length, results };
+    }   
+
+    
+    // Save questionnaire to file
+    saveToFile(questionnaire, filename) {
+        const fs = require('fs');
+        
+        const content = {
+            ...questionnaire,
+            answerKey: questionnaire.questions.map(q => ({
+                id: q.id,
+                answer: q.answer,
+                type: q.type
+            }))
+        };
+
+        try {
+            fs.writeFileSync(filename, JSON.stringify(content, null, 2));
+            console.log(Questionnaire saved to ${filename});
+        } catch (error) {
+            console.error('Error saving file:', error.message);
+        }
+    }
+
+
+// Example usage and demo
+async function main() {
+    const generator = new MathQuestionnaireGenerator();
+
+    // Generate different types of questionnaires
+    console.log('Math Questionnaire Generator Demo\n');
+
+    // Easy questionnaire
+    const easyQuiz = generator.generateQuestionnaire({
+        numQuestions: 5,
+        difficulty: 'easy',
+        questionTypes: ['addition', 'subtraction']
+    });
+
+    console.log('Generated Easy Questionnaire:');
+    generator.printQuestionnaire(easyQuiz);
+
+    // Medium mixed questionnaire
+    const mediumQuiz = generator.generateQuestionnaire({
+        numQuestions: 8,
+        difficulty: 'medium',
+        mixedTypes: true
+    });
+
+    console.log('\n\nGenerated Medium Questionnaire:');
+    generator.printQuestionnaire(mediumQuiz);
+
+    // Save to file
+    generator.saveToFile(mediumQuiz, 'math_quiz.json');
+
+    // Uncomment the following line to run interactive questionnaire
+    // await generator.runInteractiveQuestionnaire(easyQuiz);
+}
+
+// Export for use as module
+module.exports = MathQuestionnaireGenerator;
+
+// Run demo if this file is executed directly
+if (require.main === module) {
+    main().catch(console.error);
+}
+
+
+<ion-content class="ion-padding">
+  <ion-textarea [(ngModel)]="inputText" placeholder="Enter your passage or topic here..."></ion-textarea>
+
+  <ion-button expand="full" (click)="generateQuestions()">Generate Questions</ion-button>
+
+  <ion-spinner *ngIf="loading" name="dots"></ion-spinner>
+
+  <ion-list *ngIf="questions.length > 0">
+    <ion-item *ngFor="let question of questions">
+      {{ question.question }}
+    </ion-item>
+  </ion-list>
+
+  <ion-text color="danger" *ngIf="errorMessage">{{ errorMessage }}</ion-text>

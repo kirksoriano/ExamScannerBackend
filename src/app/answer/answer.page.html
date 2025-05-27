@@ -10,4 +10,45 @@
 
   <ion-button (click)="generateLayout()">Generate Layout</ion-button>
 
+
+<div class="answer-sheet-container">
+
+  <div class="header-box">
+    <div class="header-field">
+      <label>Name: <span class="underline"></span></label>
+    </div>
+    <div class="header-field">
+      <label>Class: {{className}}</label>
+    </div>
+    <div class="header-field">
+      <label>Subject: {{subjectName}}</label>
+    </div>
+    <div class="header-field title">
+      <label>{{title}}</label>
+    </div>
+  </div>
+
+  <!-- Four black corner squares -->
+  <div class="corner top-left"></div>
+  <div class="corner top-right"></div>
+  <div class="corner bottom-left"></div>
+  <div class="corner bottom-right"></div>
+
+  <!-- Bubbles container -->
+  <div class="bubbles-container" [ngStyle]="{'grid-template-columns': 'repeat(' + columnsLayout + ', 1fr)'}">
+    <div *ngFor="let q of questionPositions" class="bubble-column" [style.gridColumn]="q.column + 1">
+      <div class="question-row" [style.gridRow]="q.row + 1">
+        <div class="question-number">{{q.questionNumber}}</div>
+        <div class="bubbles">
+          <div class="bubble">A</div>
+          <div class="bubble">B</div>
+          <div class="bubble">C</div>
+          <div class="bubble">D</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 </ion-content>

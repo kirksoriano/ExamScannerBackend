@@ -1,4 +1,4 @@
-import { Component, ElementRef } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { IonicModule, NavController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +6,14 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { ApiService } from '../services/api.services';
 import { saveAs } from 'file-saver'; // install with npm install file-saver
+import { ActivatedRoute } from '@angular/router';
+
+
+interface TosRow {
+  topic: string;
+  cognitiveLevel: string;
+  numberOfItems: number;
+}
 
 @Component({
   selector: 'app-answer',
@@ -15,30 +23,56 @@ import { saveAs } from 'file-saver'; // install with npm install file-saver
   imports: [CommonModule, FormsModule, IonicModule]
 })
 
-export class AnswerPage {
+export class AnswerPage implements OnInit {
+
+    @Input() tosRows: TosRow[] = [];
+    @Input() className: string = '';
+    @Input() subjectName: string = '';
+    @Input() title: string = 'Exam Title';
+
+    tosId: number = 1; // or dynamically set this later
+
+  totalQuestions: number = 0;
+  questionPositions: { questionNumber: number, column: number, row: number }[] = [];
+
+  columnsLayout: number = 0;
+constructor(
+    private http: HttpClient,
+    private navCtrl: NavController,
+    private router: Router,
+    private apiService: ApiService,
+    private route: ActivatedRoute,
+  ) {}
+  ngOnInit() {
+  this.tosId = Number(this.route.snapshot.paramMap.get('id'));
+
+  this.http.get(`${this.BASE_URL}/tos/${this.tosId}`).subscribe((tos: any) => {
+    this.title = tos.title;
+    this.subjectName = tos.subject;
+    this.className = tos.className;
+  });
+
+  this.http.get<TosRow[]>(`${this.BASE_URL}/tos/${this.tosId}/items`).subscribe((items) => {
+    this.tosRows = items;
+    this.totalQuestions = items.reduce((sum, row) => sum + row.numberOfItems, 0);
+
+    this.generateLayout();
+  });
+}
+
+
   BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
   layoutZones: any[] = [];
-  tosId = 1; // Replace with actual selected TOS ID
-  examTitle = '';
-  subject = '';
-  gradeLevel = '';
-  numQuestions = 0;
-  questions: any[] = [];
   answerOptions = ['A', 'B', 'C', 'D'];
-
   answerSheets: any[] = [];
   selectedAnswerSheet: any = null;
 
   teacherId: any;
 
-  constructor(
-    private http: HttpClient,
-    private navCtrl: NavController,
-    private router: Router,
-    private apiService: ApiService,
-  ) {}
+
   previewLayout() {
-    this.http.get<any[]>(`http://localhost:5001/answer-sheet-layout/${this.tosId}`).subscribe(
+    this.http.get<any[]>(`${this.BASE_URL}/answer-sheet-printable/${this.tosId}`
+).subscribe(
       (data) => {
         this.layoutZones = data;
       },
@@ -49,7 +83,8 @@ export class AnswerPage {
   }
 
   downloadPDF() {
-    this.http.get(`http://localhost:5001/answer-sheet-printable/${this.tosId}`, {
+    this.http.get(`${this.BASE_URL}/answer-sheet-printable/${this.tosId}`
+, {
       responseType: 'blob'
     }).subscribe(
       (blob) => {
@@ -62,23 +97,27 @@ export class AnswerPage {
   }
 
   generateLayout() {
-  const url = 'https://examscannerbackend-production-7460.up.railway.app/answerSheets/generate-layout';
+  const url = `${this.BASE_URL}/answerSheets/generate-layout`;
 
   const body = {
-    subject: 'Math', // or use variables from a form/input
-    numberOfQuestions: 20,
-    optionsPerQuestion: 5
+    tosRows: this.tosRows,
+    className: this.className,
+    subjectName: this.subjectName,
+    title: this.title,
+    numberOfQuestions: this.totalQuestions,
+    optionsPerQuestion: 5 // default or make dynamic later
   };
 
   this.http.post(url, body).subscribe({
-    next: (response) => {
+    next: (response: any) => {
       console.log('Generated layout:', response);
-      // Store or use the response however you need
+      this.layoutZones = response.layoutZones || []; // optionally render preview
     },
     error: (error) => {
       console.error('Error generating layout:', error);
     }
   });
 }
+
 
 }
