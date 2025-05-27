@@ -25,6 +25,8 @@ export class TeacherDashboardPage implements OnInit {
   ) {}
   BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
   tosList: any[] = [];
+  userId!: number;
+
 
 ngOnInit() {
   if (!this.authService.isLoggedIn()) {
@@ -33,15 +35,21 @@ ngOnInit() {
   }
 
   const user = this.authService.getUserData();
-  const teacherId = user?.id;
+  this.userId = user?.id; // ✅ Set it before using it!
 
-  console.log('Teacher ID:', teacherId); // ✅ Debug check
+  console.log('User ID:', this.userId);
 
-  this.http.get(`${this.BASE_URL}/tos/teacher/${teacherId}`).subscribe((data: any) => {
-    console.log('TOS response:', data); // ✅ Check what you get here
-    this.tosList = data.tos || data; // use the right key depending on API
-  });
+  this.http.get(`${this.BASE_URL}/tos/user/${this.userId}`).subscribe(
+    (data: any) => {
+      console.log('TOS response:', data);
+      this.tosList = data.tos || data;
+    },
+    (error) => {
+      console.error('Error fetching TOS:', error);
+    }
+  );
 }
+
 
 
 

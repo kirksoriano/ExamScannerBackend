@@ -155,6 +155,19 @@ app.get("/answer-sheet-layout/:tos_id", async (req, res) => {
   }
 });
 
+// Get TOS by user ID
+app.get("/tos/user/:userId", async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const [rows] = await db.query("SELECT * FROM tos WHERE user_id = ?", [userId]);
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Error fetching TOS:", err.message);
+    res.status(500).json({ error: "Failed to fetch TOS." });
+  }
+});
+
+
 // Submit Detected Answers
 app.post("/submit-answers", async (req, res) => {
   const { studentId, answerSheetsId, detectedAnswers } = req.body;
