@@ -44,7 +44,7 @@ const routes: Routes = [
       ),
   },
   {
-    path: 'answer',
+    path: 'answer/:id',
     loadChildren: () => import('./answer/answer.module').then( (m) => m.AnswerPageModule)
   },
 

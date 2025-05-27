@@ -24,6 +24,7 @@ export class HomePage implements OnInit {
 
   // Base URL for backend API (use your actual backend URL here)
   BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
+  
 
   constructor(
     private http: HttpClient,
