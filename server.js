@@ -5,62 +5,65 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const axios = require('axios');
+const fs = require("fs");
+const path = require("path");
+const multer = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+const answerSheetsUtils = require('./utils/answerSheetsUtils');
+
+const { generateLayout } = require('./utils/layoutGenerator');
+const { createAnswerSheetsPDF } = require('./routes/answerSheets'); // ✅ Do not change this
+
+const answerSheetsRoutes = require('./routes/answerSheets');
+app.use('/api/answerSheets', answerSheetsRoutes);
 
 const HF_API_URL = 'https://api-inference.huggingface.co/models/valhalla/t5-base-qg-hl';
 const HF_API_KEY = process.env.HF_API_KEY;
 
-app.use(cors());
-app.use(express.json()); // this enables JSON body parsing
-
-
-// Ensure the JWT_SECRET is loaded properly
-if (!process.env.JWT_SECRET) {
-    console.error("❌ JWT_SECRET is missing.");
-    process.exit(1);
-}
-
-// Log the URL for verification (to ensure environment variables are loaded correctly)
-console.log("✅ DATABASE_URL:", process.env.DATABASE_URL);
-if (!process.env.DATABASE_URL) {
-    console.error("❌ DATABASE_URL is missing.");
-    process.exit(1);
-}
-
-// Set up MySQL connection pool using Railway's MySQL database URL
-const db = mysql.createPool(process.env.DATABASE_URL);
-
-// Check DB Connection
-(async () => {
-    try {
-        const connection = await db.getConnection();
-        console.log("✅ Connected to Railway MySQL Database");
-        connection.release();
-    } catch (error) {
-        console.error("❌ Database connection failed:", error.message);
-        process.exit(1);
-    }
-})();
-
-// Configure CORS
-app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',  // Replace with your frontend URL if needed
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use(express.json());
-
 const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
 
+// Middleware
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Environment checks
+if (!process.env.JWT_SECRET) {
+  console.error("❌ JWT_SECRET is missing.");
+  process.exit(1);
+}
+if (!process.env.DATABASE_URL) {
+  console.error("❌ DATABASE_URL is missing.");
+  process.exit(1);
+}
+console.log("✅ DATABASE_URL:", process.env.DATABASE_URL);
+
+// MySQL Pool
+const db = mysql.createPool(process.env.DATABASE_URL);
+(async () => {
+  try {
+    const connection = await db.getConnection();
+    console.log("✅ Connected to Railway MySQL Database");
+    connection.release();
+  } catch (error) {
+    console.error("❌ Database connection failed:", error.message);
+    process.exit(1);
+  }
+})();
+
+// Hugging Face Question Generator
 const generateQuestion = async (competencyText) => {
   try {
     const prompt = `Gumawa ng isang tanong na multiple choice batay sa sumusunod na paksa: "${competencyText}". Isama ang tanong, 4 na pagpipilian, at ang tamang sagot.`;
 
     const response = await axios.post(
-      'https://api-inference.huggingface.co/models/bigscience/bloom-560m', // TEMP fallback model
+      'https://api-inference.huggingface.co/models/bigscience/bloom-560m',
       { inputs: prompt },
       {
         headers: {
@@ -79,94 +82,172 @@ const generateQuestion = async (competencyText) => {
 
 module.exports = generateQuestion;
 
-// ✅ Register User
+// ✅ Register
 app.post("/register", async (req, res) => {
-    const { email, password, name } = req.body;
-    if (!email || !password || !name) {
-        return res.status(400).json({ message: "Missing required fields." });
+  const { email, password, name } = req.body;
+  if (!email || !password || !name) {
+    return res.status(400).json({ message: "Missing required fields." });
+  }
+
+  try {
+    const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    if (existing.length > 0) {
+      return res.status(409).json({ message: "Email already registered." });
     }
 
-    try {
-        const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
-        if (existing.length > 0) {
-            return res.status(409).json({ message: "Email already registered." });
-        }
+    const [result] = await db.query(
+      "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+      [email, password, name]
+    );
 
-        // Store password as plain text for now
-        const [result] = await db.query(
-            "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
-            [email, password, name]
-        );
-        
-        return res.status(201).json({
-            message: "User registered successfully.",
-            user: {
-                id: result.insertId,
-                email,
-                name
-            }
-        });
-    } catch (err) {
-        console.error("❌ Registration error:", err);
-        return res.status(500).json({ message: "Server error during registration." });
-    }
+    res.status(201).json({
+      message: "User registered successfully.",
+      user: {
+        id: result.insertId,
+        email,
+        name
+      }
+    });
+  } catch (err) {
+    console.error("❌ Registration error:", err);
+    res.status(500).json({ message: "Server error during registration." });
+  }
 });
 
-// ✅ Login User
+// ✅ Login
 app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Missing email or password' });
+  }
 
-    if (!email || !password) {
-        return res.status(400).json({ message: 'Missing email or password' });
+  try {
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    if (rows.length === 0 || rows[0].password !== password) {
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    try {
-        const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    const user = rows[0];
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        if (rows.length === 0) {
-            return res.status(401).json({ message: 'Invalid email or password' });
-        }
-
-        const user = rows[0];
-        
-        // Compare the password directly (no bcrypt)
-        if (user.password !== password) {
-            return res.status(401).json({ message: 'Invalid email or password' });
-        }
-
-        // Create a JWT token if the password matches
-        const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        res.json({
-            message: 'Login successful',
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email
-            },
-            token  // Send the token to the frontend
-        });
-
-    } catch (error) {
-        console.error('❌ Login error:', error.message);
-        res.status(500).json({ message: 'Internal server error' });
-    }
+    res.json({
+      message: 'Login successful',
+      user: { id: user.id, name: user.name, email: user.email },
+      token
+    });
+  } catch (error) {
+    console.error('❌ Login error:', error.message);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
-// ✅ Fetch all classes for a specific teacher (using query parameter)
-app.get('/classes', async (req, res) => {
-    const teacherId = req.query.teacher_id;
-    if (!teacherId) {
-        return res.status(400).json({ error: "teacher_id is required." });
-    }
+// Multer config
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/headers";
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `header-${Date.now()}${ext}`);
+  }
+});
+const upload = multer({ storage });
 
-    try {
-        const [rows] = await db.execute('SELECT * FROM classes WHERE teacher_id = ?', [teacherId]);
-        res.json(rows);
-    } catch (error) {
-        console.error('❌ Error fetching classes:', error.message);
-        res.status(500).json({ message: 'Error fetching classes' });
-    }
+// Upload header
+app.post("/upload-header", upload.single("header"), async (req, res) => {
+  const { studentId, answerSheetsId } = req.body;
+  try {
+    await db.query(
+      "INSERT INTO scanned_students (student_id, answer_sheet_id, header_image_path) VALUES (?, ?, ?)",
+      [studentId, answerSheetsId, req.file.path]
+    );
+    res.json({ success: true, headerPath: req.file.path });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to save header crop" });
+  }
+});
+
+// Answer sheet routes
+app.post("/generate-answer-sheet", async (req, res) => {
+  const { tosId, title, classId } = req.body;
+  try {
+    const [tosItems] = await db.query("SELECT * FROM tos_items WHERE tos_id = ?", [tosId]);
+    const layout = generateLayout(tosItems);
+    const [result] = await db.query(
+      "INSERT INTO answer_sheets (title, tos_id, class_id, layout_json) VALUES (?, ?, ?, ?)",
+      [title, tosId, classId, JSON.stringify(layout)]
+    );
+    res.json({ success: true, id: result.insertId, layout });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to generate answer sheet" });
+  }
+});
+
+app.get("/answer-sheet-printable/:tos_id", async (req, res) => {
+  const { tos_id } = req.params;
+  try {
+    const pdfBuffer = await createAnswerSheetsPDF(tos_id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=answer_sheet_${tos_id}.pdf`,
+    });
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error("PDF generation error:", err);
+    res.status(500).json({ error: "Failed to generate answer sheet PDF" });
+  }
+});
+
+app.get("/answer-sheet-layout/:tos_id", async (req, res) => {
+  const { tos_id } = req.params;
+  try {
+    const layout = await generateLayout(tos_id);
+    res.json({ layout });
+  } catch (err) {
+    console.error("Error getting layout:", err);
+    res.status(500).json({ error: "Failed to retrieve layout" });
+  }
+});
+
+// Submit scanned answers
+app.post("/submit-answers", async (req, res) => {
+  const { studentId, answerSheetsId, detectedAnswers } = req.body;
+  try {
+    const [sheetRows] = await db.query("SELECT * FROM answer_sheets WHERE id = ?", [answerSheetsId]);
+    if (!sheetRows.length) return res.status(404).json({ error: "Answer sheet not found" });
+
+    const layout = JSON.parse(sheetRows[0].layout_json);
+    const scoreReport = answerSheetsUtils.scoreAnswers(detectedAnswers, layout);
+
+    await db.query(
+      "INSERT INTO results (student_id, answer_sheet_id, score, topic_breakdown) VALUES (?, ?, ?, ?)",
+      [studentId, answerSheetsId, scoreReport.totalScore, JSON.stringify(scoreReport.topicBreakdown)]
+    );
+    res.json({ success: true, report: scoreReport });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to submit answers" });
+  }
+});
+
+// ✅ Fetch all classes for a specific teacher
+app.get('/classes', async (req, res) => {
+  const { teacher_id } = req.query;
+  if (!teacher_id) {
+    return res.status(400).json({ error: "teacher_id is required." });
+  }
+
+  try {
+    const [rows] = await db.execute('SELECT * FROM classes WHERE teacher_id = ?', [teacher_id]);
+    res.json(rows);
+  } catch (error) {
+    console.error('❌ Error fetching classes:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // ✅ Add a new class
@@ -293,114 +374,6 @@ app.delete('/students/:studentId', async (req, res) => {
         res.status(500).json({ message: 'Error deleting student' });
     }
 });
-
-
-// Get all answer sheets for a teacher (with camelCase keys + parsed questions)
-app.get('/answer-sheets', async (req, res) => {
-  const { teacher_id } = req.query;
-
-  if (!teacher_id) {
-    return res.status(400).json({ message: 'Missing teacher_id' });
-  }
-
-  try {
-    const [rows] = await db.query(
-      'SELECT * FROM answer_sheets WHERE teacher_id = ? ORDER BY id DESC',
-      [teacher_id]
-    );
-
-    const parsedRows = rows.map(row => {
-      let parsedQuestions = [];
-
-      try {
-        parsedQuestions = JSON.parse(row.questions || '[]');
-      } catch (err) {
-        console.warn(`⚠️ Failed to parse questions for answer sheet ID ${row.id}`);
-      }
-
-      return {
-        id: row.id,
-        examTitle: row.exam_title,
-        subject: row.subject,
-        gradeLevel: row.grade_level,
-        teacherId: row.teacher_id,
-        questions: parsedQuestions
-      };
-    });
-
-    res.json(parsedRows);
-  } catch (err) {
-    console.error('❌ Error fetching answer sheets:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
-
-
-// Save a new answer sheet
-app.post('/answer-sheets', async (req, res) => {
-  const { examTitle, subject, gradeLevel, questions, teacherId } = req.body;
-
-  console.log('Received request body:', req.body);
-
-  if (!teacherId || !examTitle || !subject || !gradeLevel || !questions) {
-    return res.status(400).json({ message: 'Missing required fields' });
-  }
-
-  try {
-    const [result] = await db.execute(
-      'INSERT INTO answer_sheets (exam_title, subject, grade_level, questions, teacher_id) VALUES (?, ?, ?, ?, ?)',
-      [examTitle, subject, gradeLevel, JSON.stringify(questions), teacherId]
-    );
-
-    res.json({ id: result.insertId, message: 'Answer sheet saved' });
-  } catch (err) {
-    console.error('❌ Error saving answer sheet:', err);
-    res.status(500).json({ message: 'Server error while saving answer sheet', error: err.message });
-  }
-});
-
-
-// Update an existing answer sheet
-app.put('/answer-sheets/:id', async (req, res) => {
-  const { id } = req.params;
-  const { examTitle, subject, gradeLevel, questions } = req.body;
-
-  if (!examTitle || !subject || !gradeLevel || !questions) {
-    return res.status(400).json({ message: 'Missing required fields' });
-  }
-
-  try {
-    await db.query(
-      'UPDATE answer_sheets SET exam_title = ?, subject = ?, grade_level = ?, questions = ? WHERE id = ?',
-      [examTitle, subject, gradeLevel, JSON.stringify(questions), id]
-    );
-    res.status(200).json({ message: 'Answer sheet updated' });
-  } catch (error) {
-    console.error('❌ Error updating answer sheet:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
-// Delete an answer sheet
-app.delete('/answer-sheets/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const [result] = await db.query('DELETE FROM answer_sheets WHERE id = ?', [id]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Answer sheet not found' });
-    }
-
-    res.status(200).json({ message: 'Answer sheet deleted' });
-  } catch (error) {
-    console.error('❌ Error deleting answer sheet:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
     
 // Create new TOS (with table_data)
 app.post('/tos', async (req, res) => {

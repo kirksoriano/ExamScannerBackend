@@ -18,6 +18,30 @@ export class ApiService {
 
     return this.http.get<any>(`${this.baseUrl}/classes/${teacherId}`, { headers: headers });
   }
+  // Answer Sheets CRUD
+  getAnswerSheets(): Observable<any> {
+    const token = this.authService.getToken();
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.get<any>(`${this.baseUrl}/answersheets`, { headers });
+  }
+
+  saveAnswerSheet(sheetData: any): Observable<any> {
+    const token = this.authService.getToken();
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.post<any>(`${this.baseUrl}/answersheets`, sheetData, { headers });
+  }
+
+  updateAnswerSheet(sheetId: number, updatedData: any): Observable<any> {
+    const token = this.authService.getToken();
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.put<any>(`${this.baseUrl}/answersheets/${sheetId}`, updatedData, { headers });
+  }
+
+  deleteAnswerSheet(sheetId: number): Observable<any> {
+    const token = this.authService.getToken();
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.delete<any>(`${this.baseUrl}/answersheets/${sheetId}`, { headers });
+  }
 
   // Register a student (with authentication)
   registerStudent(studentData: any): Observable<any> {
