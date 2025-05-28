@@ -182,6 +182,23 @@ app.get("/tos/:id/items", async (req, res) => {
   }
 });
 
+app.post("/answerSheets/generate-layout", async (req, res) => {
+  const { tosId, title, classId } = req.body;
+  try {
+    const [tosItems] = await db.query("SELECT * FROM tos_items WHERE tos_id = ?", [tosId]);
+    const layout = generateLayout(tosItems);
+    const [result] = await db.query(
+      "INSERT INTO answer_sheets (title, tos_id, class_id, layout_json) VALUES (?, ?, ?, ?)",
+      [title, tosId, classId, JSON.stringify(layout)]
+    );
+    res.json({ success: true, id: result.insertId, layout });
+  } catch (err) {
+    console.error("❌ Failed to generate answer sheet:", err.message);
+    res.status(500).json({ error: "Failed to generate answer sheet" });
+  }
+});
+
+
 // Submit Detected Answers
 app.post("/submit-answers", async (req, res) => {
   const { studentId, answerSheetsId, detectedAnswers } = req.body;

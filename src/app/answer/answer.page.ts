@@ -52,12 +52,13 @@ constructor(
     this.className = tos.className;
   });
 
-  this.http.get<TosRow[]>(`${this.BASE_URL}/tos/${this.tosId}/items`).subscribe((items) => {
+    this.http.get<any>(`${this.BASE_URL}/tos/${this.tosId}/items`).subscribe((response) => {
+    const items = response.items || []; // extract actual array
     this.tosRows = items;
-    this.totalQuestions = items.reduce((sum, row) => sum + row.numberOfItems, 0);
-
+    this.totalQuestions = items.reduce((sum: number, row: TosRow) => sum + row.numberOfItems, 0);
     this.generateLayout();
   });
+
 }
 
 
