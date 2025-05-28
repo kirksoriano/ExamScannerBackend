@@ -98,27 +98,24 @@ constructor(
   }
 
   generateLayout() {
-  const url = `${this.BASE_URL}/answerSheets/generate-layout`;
+  const url = `${this.BASE_URL}/generate-answer-sheet`;
 
   const body = {
-    tosRows: this.tosRows,
-    className: this.className,
-    subjectName: this.subjectName,
+    tosId: this.tosId,
     title: this.title,
-    numberOfQuestions: this.totalQuestions,
-    optionsPerQuestion: 5 // default or make dynamic later
+    classId: 1 // Replace this with real classId if you later fetch it
   };
+
+  console.log('📦 Sending layout request body:', body);
 
   this.http.post(url, body).subscribe({
     next: (response: any) => {
-      console.log('Generated layout:', response);
-      this.layoutZones = response.layoutZones || []; // optionally render preview
+      console.log('✅ Generated layout:', response);
+      this.layoutZones = response.layoutZones || [];
     },
     error: (error) => {
-      console.error('Error generating layout:', error);
+      console.error('❌ Error generating layout:', error);
     }
   });
 }
-
-
 }
