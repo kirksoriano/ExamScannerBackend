@@ -167,7 +167,20 @@ app.get("/tos/user/:userId", async (req, res) => {
   }
 });
 
-
+// Get items (table_data) of a specific TOS by ID
+app.get("/tos/:id/items", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await db.query("SELECT table_data FROM tos WHERE id = ?", [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "TOS not found." });
+    }
+    res.json({ items: JSON.parse(rows[0].table_data) });
+  } catch (err) {
+    console.error("❌ Error fetching TOS items:", err.message);
+    res.status(500).json({ error: "Failed to fetch TOS items." });
+  }
+});
 
 // Submit Detected Answers
 app.post("/submit-answers", async (req, res) => {
