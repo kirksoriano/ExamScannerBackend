@@ -159,13 +159,14 @@ app.get("/answer-sheet-layout/:tos_id", async (req, res) => {
 app.get("/tos/user/:userId", async (req, res) => {
   const { userId } = req.params;
   try {
-    const [rows] = await db.query("SELECT * FROM tos WHERE user_id = ?", [userId]);
+    const [rows] = await db.query("SELECT * FROM tos WHERE teacher_id = ?", [userId]);
     res.json(rows);
   } catch (err) {
     console.error("❌ Error fetching TOS:", err.message);
     res.status(500).json({ error: "Failed to fetch TOS." });
   }
 });
+
 
 
 // Submit Detected Answers
