@@ -161,19 +161,60 @@ app.get("/tos/:id/items", async (req, res) => {
   }
 });
 
-app.post("/answerSheets/generate-layout", async (req, res) => {
+app.post('/answerSheets/generate-layout', async (req, res) => {
   const { tosId, title, classId } = req.body;
+
+  if (!tosId || !title || !classId) {
+    return res.status(400).json({ error: 'Missing required fields: tosId, title, or classId' });
+  }
+
   try {
-    const [tosItems] = await db.query("SELECT * FROM tos_items WHERE tos_id = ?", [tosId]);
-    const layout = generateLayout(tosItems);
-    const [result] = await db.query(
-      "INSERT INTO answer_sheets (title, tos_id, class_id, layout_json) VALUES (?, ?, ?, ?)",
-      [title, tosId, classId, JSON.stringify(layout)]
+    // 1. Get the tos_items for the given tosId
+    const [tosItems] = await db.query(
+      'SELECT * FROM tos_items WHERE tos_id = ?',
+      [tosId]
     );
-    res.json({ success: true, id: result.insertId, layout });
-  } catch (err) {
-    console.error("❌ Failed to generate answer sheet:", err.message);
-    res.status(500).json({ error: "Failed to generate answer sheet" });
+
+    if (tosItems.length === 0) {
+      return res.status(404).json({ error: 'No TOS items found for this TOS ID' });
+    }
+
+    const cognitiveLevels = ['remembering', 'understanding', 'applying', 'analyzing', 'evaluating', 'creating'];
+    const layout = [];
+
+    let questionNumber = 1;
+    let row = 0;
+    let column = 0;
+    const maxColumns = 5; // adjust as needed (e.g. 5 questions per row)
+
+    // 2. Generate layout zones from each cognitive level
+    for (const item of tosItems) {
+      for (const level of cognitiveLevels) {
+        const count = Number(item[level]);
+
+        for (let i = 0; i < count; i++) {
+          layout.push({
+            questionNumber: questionNumber++,
+            topic: item.topic,
+            cognitiveLevel: level,
+            row: row,
+            column: column
+          });
+
+          column++;
+          if (column >= maxColumns) {
+            column = 0;
+            row++;
+          }
+        }
+      }
+    }
+
+    return res.json({ layout });
+
+  } catch (error) {
+    console.error('❌ Error generating layout:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
