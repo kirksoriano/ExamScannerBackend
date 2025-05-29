@@ -123,16 +123,16 @@ app.get("/answer-sheet-printable/:tos_id", async (req, res) => {
 });
 
 // Get Layout for a TOS
-app.get("/answer-sheet-layout/:tos_id", async (req, res) => {
-  const { tos_id } = req.params;
-  try {
-    const layout = generateLayout(tosItems);
-    res.json({ layout });
-  } catch (err) {
-    console.error("❌ Error retrieving layout:", err.message);
-    res.status(500).json({ error: "Failed to retrieve layout" });
+this.http.get<any>(`${this.BASE_URL}/answer-sheet-layout/${this.tosId}`).subscribe({
+  next: (data) => {
+    console.log('✅ Preview layout loaded:', data);
+    this.layoutZones = data.layout;
+  },
+  error: (err) => {
+    console.error('❌ Error loading layout preview:', err);
   }
 });
+
 
 // Get TOS by user ID
 app.get("/tos/user/:userId", async (req, res) => {
