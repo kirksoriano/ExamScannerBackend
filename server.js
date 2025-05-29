@@ -9,7 +9,7 @@ const fs = require("fs");
 const axios = require("axios");
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT;
 
 const answerSheetsRoutes = require('./routes/answerSheets');
 const answerSheetsUtils = require("./utils/answerSheetsUtils");
@@ -83,9 +83,6 @@ async function startServer() {
     const [testItems] = await pool.query('SELECT * FROM tos_items WHERE tos_id = ?', [1]);
     console.log('Test TOS Items:', testItems);
 
-    app.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-    });
   } catch (error) {
     console.error('❌ Error starting server:', error);
     process.exit(1);
