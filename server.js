@@ -14,8 +14,12 @@ const PORT = process.env.PORT || 5001;
 const answerSheetsUtils = require("./utils/answerSheetsUtils");
 const { generateLayout } = require('./layoutGenerator');
 
-const pdfBuffer = await generateLayout(tosItems);
+async function startServer() {
+  const pdfBuffer = await generateLayout(tosItems);
+  // more logic here
+}
 
+startServer();
 const { createAnswerSheetsPDF } = require("./routes/answerSheets");
 const answerSheetsRoutes = require("./routes/answerSheets");
 
