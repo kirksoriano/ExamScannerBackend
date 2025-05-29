@@ -15,13 +15,13 @@
     <ion-input [(ngModel)]="subjectTitle"></ion-input>
   </ion-item>
 
-  <!-- Add Row and Print Buttons -->
+  <!-- Action Buttons -->
   <ion-buttons class="ion-margin-vertical" style="display: flex; gap: 10px;">
     <ion-button expand="block" color="primary" (click)="addRow()">Add New Row</ion-button>
     <ion-button expand="block" color="medium" (click)="printTOS()">Print TOS</ion-button>
   </ion-buttons>
 
-  <!-- Editable Table (for screen only) -->
+  <!-- Editable Table -->
   <div class="table-wrapper editable-table">
     <div id="tosTable" class="table-container">
       <h2 style="text-align: center;">{{ subjectTitle }}</h2>
@@ -31,15 +31,14 @@
             <th>Learning Competencies</th>
             <th>No. of Days</th>
             <th>%</th>
-            <th>No. of Items</th>
             <th>Remembering</th>
             <th>Understanding</th>
             <th>Applying</th>
             <th>Analyzing</th>
             <th>Evaluating</th>
             <th>Creating</th>
-            <th>Total No. of Items</th>
             <th># of Questions</th>
+            <th>Total No. of Items</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -48,14 +47,13 @@
             <td><ion-input [(ngModel)]="row.learningCompetencies"></ion-input></td>
             <td><ion-input type="number" [(ngModel)]="row.noOfDays"></ion-input></td>
             <td><ion-input type="number" [(ngModel)]="row.percentage"></ion-input></td>
-            <td><ion-input type="number" [(ngModel)]="row.noOfItems"></ion-input></td>
             <td><ion-input type="number" [(ngModel)]="row.remembering" (ionInput)="updateTotal(i)"></ion-input></td>
             <td><ion-input type="number" [(ngModel)]="row.understanding" (ionInput)="updateTotal(i)"></ion-input></td>
             <td><ion-input type="number" [(ngModel)]="row.applying" (ionInput)="updateTotal(i)"></ion-input></td>
             <td><ion-input type="number" [(ngModel)]="row.analyzing" (ionInput)="updateTotal(i)"></ion-input></td>
             <td><ion-input type="number" [(ngModel)]="row.evaluating" (ionInput)="updateTotal(i)"></ion-input></td>
             <td><ion-input type="number" [(ngModel)]="row.creating" (ionInput)="updateTotal(i)"></ion-input></td>
-            <td><ion-input type="number" min="1" [(ngModel)]="row.questionsToGenerate"></ion-input></td>
+            <td><ion-input type="number" min="1" [(ngModel)]="row.questionsToGenerate" (ionInput)="updateTotal(i)"></ion-input></td>
             <td>{{ row.totalNoOfItems }}</td>
             <td>
               <ion-button color="danger" size="small" (click)="deleteRow(i)">
@@ -68,7 +66,7 @@
     </div>
   </div>
 
-  <!-- Printable Table (for printing only) -->
+  <!-- Printable Table -->
   <div class="table-wrapper print-only">
     <ion-button color="primary" (click)="goBack()" style="margin-bottom: 16px;">Back</ion-button>
     <div class="table-container">
@@ -79,13 +77,13 @@
             <th>Learning Competencies</th>
             <th>No. of Days</th>
             <th>%</th>
-            <th>No. of Items</th>
             <th>Remembering</th>
             <th>Understanding</th>
             <th>Applying</th>
             <th>Analyzing</th>
             <th>Evaluating</th>
             <th>Creating</th>
+            <th># of Questions</th>
             <th>Total No. of Items</th>
           </tr>
         </thead>
@@ -94,13 +92,13 @@
             <td>{{ row.learningCompetencies }}</td>
             <td>{{ row.noOfDays }}</td>
             <td>{{ row.percentage }}</td>
-            <td>{{ row.noOfItems }}</td>
             <td>{{ row.remembering }}</td>
             <td>{{ row.understanding }}</td>
             <td>{{ row.applying }}</td>
             <td>{{ row.analyzing }}</td>
             <td>{{ row.evaluating }}</td>
             <td>{{ row.creating }}</td>
+            <td>{{ row.questionsToGenerate }}</td>
             <td>{{ row.totalNoOfItems }}</td>
           </tr>
         </tbody>
@@ -109,16 +107,13 @@
   </div>
 
   <!-- Save TOS Button -->
-<ion-button expand="block" color="primary" (click)="saveTOS()">
-  Save TOS
-</ion-button>
-
+  <ion-button expand="block" color="primary" (click)="saveTOS()">
+    Save TOS
+  </ion-button>
 
   <!-- Generate Questions Button -->
   <ion-button expand="block" color="success" (click)="generateQuestions()">
     Generate Questions
   </ion-button>
-
-
 
 </ion-content>

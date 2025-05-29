@@ -18,75 +18,24 @@ export class TosPage {
   teacherId: any;
   BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
 
-  constructor(private router: Router, private http: HttpClient, private navCtrl: NavController) {}
+  constructor(
+    private router: Router,
+    private http: HttpClient,
+    private navCtrl: NavController
+  ) {}
 
   ngOnInit() {
-  const userData = localStorage.getItem('userData');
-  if (!userData) {
-    this.navCtrl.navigateRoot('/home');  // redirect if not logged in
-    return;
-  }
-  const user = JSON.parse(userData);
-  this.teacherId = user.id;
-  console.log('✅ Teacher ID loaded:', this.teacherId);
-}
-
-  saveTOS() {
-  if (!this.teacherId) {
-    alert('Teacher not logged in.');
-    return;
+    const userData = localStorage.getItem('userData');
+    if (!userData) {
+      this.navCtrl.navigateRoot('/home');
+      return;
+    }
+    const user = JSON.parse(userData);
+    this.teacherId = user.id;
+    console.log('✅ Teacher ID loaded:', this.teacherId);
   }
 
-  // Step 1: Save main TOS entry
-const mainTosData = {
-  teacherId: this.teacherId,
-  tosTitle: this.subjectTitle,
-  subject: this.subjectTitle, // or separate input if needed
-  totalItems: this.tableData.reduce((sum, row) => sum + (row.totalNoOfItems || 0), 0),
-};
-
-this.http.post(`${this.BASE_URL}/tos`, mainTosData).subscribe(
-  (response: any) => {
-    const tosId = response.insertId || response.id;
-
-    // Step 2: Save each row into tos_items using the correct endpoint
-    const tosItemsRequests = this.tableData.map((row) => {
-      return this.http.post(`${this.BASE_URL}/tos/${tosId}/items`, {
-        topic: row.learningCompetencies,
-        items: row.totalNoOfItems || 0,
-        learningCompetency: row.learningCompetencies,
-        noOfDays: row.noOfDays,
-        percentage: row.percentage,
-        noOfItems: row.noOfItems,
-        remembering: row.remembering,
-        understanding: row.understanding,
-        applying: row.applying,
-        analyzing: row.analyzing,
-        evaluating: row.evaluating,
-        creating: row.creating,
-        totalNoOfItems: row.totalNoOfItems,
-        questionsToGenerate: row.questionsToGenerate || 1
-      });
-    });
-
-    Promise.all(tosItemsRequests.map(req => req.toPromise())).then(() => {
-      alert('✅ Table of Specification and items saved successfully!');
-    }).catch((err) => {
-      console.error('❌ Error saving TOS items:', err);
-      alert('Some items may have failed to save.');
-    });
-
-  },
-  error => {
-    console.error('❌ Error saving main TOS:', error);
-    alert('Failed to save Table of Specification.');
-  }
-);
-  }
-
-
-
-
+  // Add a new row to the TOS table
   addRow() {
     this.tableData.push({
       learningCompetencies: '',
@@ -100,14 +49,16 @@ this.http.post(`${this.BASE_URL}/tos`, mainTosData).subscribe(
       evaluating: 0,
       creating: 0,
       totalNoOfItems: 0,
-      questionsToGenerate: 1, // New field: default to 1
+      questionsToGenerate: 1, // Default to 1
     });
   }
 
+  // Remove a row from the TOS table
   deleteRow(index: number) {
     this.tableData.splice(index, 1);
   }
 
+  // Update the total number of items for a row
   updateTotal(index: number) {
     const row = this.tableData[index];
     row.totalNoOfItems =
@@ -117,17 +68,70 @@ this.http.post(`${this.BASE_URL}/tos`, mainTosData).subscribe(
       (row.analyzing || 0) +
       (row.evaluating || 0) +
       (row.creating || 0);
-      (row.questionsToGenerate || 0);
   }
 
+  // Save the entire TOS to backend
+  saveTOS() {
+    if (!this.teacherId) {
+      alert('Teacher not logged in.');
+      return;
+    }
+
+    const mainTosData = {
+      teacherId: this.teacherId,
+      tosTitle: this.subjectTitle,
+      subject: this.subjectTitle,
+      totalItems: this.tableData.reduce((sum, row) => sum + (row.totalNoOfItems || 0), 0),
+    };
+
+    this.http.post(`${this.BASE_URL}/tos`, mainTosData).subscribe(
+      (response: any) => {
+        const tosId = response.insertId || response.id;
+
+        const tosItemsRequests = this.tableData.map((row) => {
+          return this.http.post(`${this.BASE_URL}/tos/${tosId}/items`, {
+            topic: row.learningCompetencies,
+            items: row.totalNoOfItems || 0,
+            learningCompetency: row.learningCompetencies,
+            noOfDays: row.noOfDays,
+            percentage: row.percentage,
+            noOfItems: row.noOfItems,
+            remembering: row.remembering,
+            understanding: row.understanding,
+            applying: row.applying,
+            analyzing: row.analyzing,
+            evaluating: row.evaluating,
+            creating: row.creating,
+            totalNoOfItems: row.totalNoOfItems,
+            questionsToGenerate: row.questionsToGenerate || 1,
+          });
+        });
+
+        Promise.all(tosItemsRequests.map(req => req.toPromise())).then(() => {
+          alert('✅ Table of Specification and items saved successfully!');
+        }).catch((err) => {
+          console.error('❌ Error saving TOS items:', err);
+          alert('Some items may have failed to save.');
+        });
+
+      },
+      (error) => {
+        console.error('❌ Error saving main TOS:', error);
+        alert('Failed to save Table of Specification.');
+      }
+    );
+  }
+
+  // Navigate to question generator
   generateQuestions() {
     this.router.navigate(['/question-generator'], {
       state: { tosData: this.tableData, subjectTitle: this.subjectTitle },
     });
   }
 
+  // Print the current TOS table
   printTOS() {
-    const subjectTitle = this.subjectTitle
+    const subjectTitleHTML = this.subjectTitle
       ? `<h1 style="text-align: center;">${this.subjectTitle}</h1>`
       : '';
 
@@ -155,26 +159,14 @@ this.http.post(`${this.BASE_URL}/tos`, mainTosData).subscribe(
         <head>
           <title>Print TOS</title>
           <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 20px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            th, td {
-              border: 1px solid #ccc;
-              padding: 8px;
-              text-align: center;
-            }
-            th {
-              background-color: #f0f0f0;
-            }
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+            th { background-color: #f0f0f0; }
           </style>
         </head>
         <body>
-          ${subjectTitle}
+          ${subjectTitleHTML}
           <table>
             <thead>
               <tr>
@@ -210,7 +202,8 @@ this.http.post(`${this.BASE_URL}/tos`, mainTosData).subscribe(
       printWindow.close();
     }
   }
-  
+
+  // Go back to previous page
   goBack() {
     window.history.back();
   }
