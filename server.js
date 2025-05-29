@@ -13,12 +13,13 @@ const PORT = process.env.PORT || 5001;
 
 const answerSheetsRoutes = require('./routes/answerSheets');
 const answerSheetsUtils = require("./utils/answerSheetsUtils");
-const { generateLayout } = require('./utils/layoutGenerator');
-const { createAnswerSheetsPDF } = require('./utils/layoutGenerator'); // or wherever it's defined
+const { generateLayout, createAnswerSheetsPDF } = require('./utils/layoutGenerator');
 
 app.use(cors());
+app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ✅ Define the pool first
+// ✅ Database Pool
 const pool = mysql.createPool({
   host: 'metro.proxy.rlwy.net',
   user: 'root',
@@ -27,59 +28,12 @@ const pool = mysql.createPool({
   port: 32705
 });
 
-// ✅ Example async function using the pool
-async function getTosItems(tosId) {
-  const [rows] = await pool.query('SELECT * FROM tos_items WHERE tos_id = ?', [tosId]);
-  return rows;
-}
+// ✅ Routes
+app.use('/answerSheets', answerSheetsRoutes);
 
-// ✅ Start the server after pool is ready
-async function startServer() {
-  try {
-    console.log('✅ DATABASE_URL:', process.env.DATABASE_URL);
 
-    // Optional test query
-    const testItems = await getTosItems(1);
-    console.log('Test TOS Items:', testItems);
-
-    app.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-    });
-
-  } catch (error) {
-    console.error('❌ Error starting server:', error);
-  }
-}
-
-startServer();
-
+// ✅ Hugging Face Question Generator
 const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
-
-// Middleware
-
-app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-// Database connection
-if (!process.env.JWT_SECRET || !process.env.DATABASE_URL) {
-  console.error("❌ Missing environment variable(s): JWT_SECRET or DATABASE_URL.");
-  process.exit(1);
-}
-console.log("✅ DATABASE_URL:", process.env.DATABASE_URL);
-
-const db = mysql.createPool(process.env.DATABASE_URL);
-(async () => {
-  try {
-    const conn = await db.getConnection();
-    console.log("✅ Connected to Railway MySQL Database");
-    conn.release();
-  } catch (err) {
-    console.error("❌ Database connection failed:", err.message);
-    process.exit(1);
-  }
-})();
-
-// Hugging Face Question Generator
 const generateQuestion = async (competencyText) => {
   try {
     const prompt = `Gumawa ng isang tanong na multiple choice batay sa sumusunod na paksa: "${competencyText}". Isama ang tanong, 4 na pagpipilian, at ang tamang sagot.`;
@@ -100,13 +54,7 @@ const generateQuestion = async (competencyText) => {
   }
 };
 
-// Routes
-app.use('/answerSheets', answerSheetsRoutes);
-
-// ✅ Registration (DO NOT MODIFY)
-// ✅ Login (DO NOT MODIFY)
-
-// Multer Config for Header Uploads
+// ✅ Multer Config for Uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "uploads/headers";
@@ -119,6 +67,32 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage });
+
+
+// ✅ Start the server after pool is ready
+async function startServer() {
+  try {
+    console.log('✅ DATABASE_URL:', process.env.DATABASE_URL);
+
+    // Test DB connection
+    const conn = await pool.getConnection();
+    console.log("✅ Connected to Railway MySQL Database");
+    conn.release();
+
+    // Optional test query
+    const [testItems] = await pool.query('SELECT * FROM tos_items WHERE tos_id = ?', [1]);
+    console.log('Test TOS Items:', testItems);
+
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('❌ Error starting server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 // Upload Header Image
 app.post("/upload-header", upload.single("header"), async (req, res) => {
