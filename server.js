@@ -12,7 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 const answerSheetsUtils = require("./utils/answerSheetsUtils");
-const { generateLayout } = require('./layoutGenerator');
+const { generateLayout } = require('./utils/layoutGenerator');
 
 async function startServer() {
   const pdfBuffer = await generateLayout(tosItems);
