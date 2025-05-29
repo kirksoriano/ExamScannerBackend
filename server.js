@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 5001;
 const answerSheetsRoutes = require('./routes/answerSheets');
 const answerSheetsUtils = require("./utils/answerSheetsUtils");
 const { generateLayout } = require('./utils/layoutGenerator');
+const { createAnswerSheetsPDF } = require('./utils/layoutGenerator'); // or wherever it's defined
 
 async function getTosItems(tosId) {
   const [rows] = await pool.query('SELECT * FROM tos_items WHERE tos_id = ?', [tosId]);
@@ -123,23 +124,6 @@ app.post("/upload-header", upload.single("header"), async (req, res) => {
   }
 });
 
-// Generate Answer Sheet
-app.post("/generate-answer-sheet", async (req, res) => {
-  const { tosId, title, classId } = req.body;
-  try {
-    const [tosItems] = await db.query("SELECT * FROM tos_items WHERE tos_id = ?", [tosId]);
-    const layout = generateLayout(tosItems);
-    const [result] = await db.query(
-      "INSERT INTO answer_sheets (title, tos_id, class_id, layout_json) VALUES (?, ?, ?, ?)",
-      [title, tosId, classId, JSON.stringify(layout)]
-    );
-    res.json({ success: true, id: result.insertId, layout });
-  } catch (err) {
-    console.error("❌ Failed to generate answer sheet:", err.message);
-    res.status(500).json({ error: "Failed to generate answer sheet" });
-  }
-});
-
 // Printable Answer Sheet PDF
 app.get("/answer-sheet-printable/:tos_id", async (req, res) => {
   const { tos_id } = req.params;
@@ -160,7 +144,7 @@ app.get("/answer-sheet-printable/:tos_id", async (req, res) => {
 app.get("/answer-sheet-layout/:tos_id", async (req, res) => {
   const { tos_id } = req.params;
   try {
-    const layout = await generateLayout(tos_id);
+    const layout = generateLayout(tosItems);
     res.json({ layout });
   } catch (err) {
     console.error("❌ Error retrieving layout:", err.message);
