@@ -75,12 +75,12 @@ async function startServer() {
     console.log('✅ DATABASE_URL:', process.env.DATABASE_URL);
 
     // Test DB connection
-    const conn = await pool.getConnection();
+    const conn = await db.getConnection();
     console.log("✅ Connected to Railway MySQL Database");
     conn.release();
 
     // Optional test query
-    const [testItems] = await pool.query('SELECT * FROM tos_items WHERE tos_id = ?', [1]);
+    const [testItems] = await db.query('SELECT * FROM tos_items WHERE tos_id = ?', [1]);
     console.log('Test TOS Items:', testItems);
 
   } catch (error) {
