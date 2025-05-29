@@ -16,14 +16,12 @@ const answerSheetsUtils = require("./utils/answerSheetsUtils");
 const { generateLayout } = require('./utils/layoutGenerator');
 const { createAnswerSheetsPDF } = require('./utils/layoutGenerator'); // or wherever it's defined
 
-const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 
 require('dotenv').config();
 
 app.use(cors());
-app.use(express.json());
 
 // ✅ Define the pool first
 const pool = mysql.createPool({
