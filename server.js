@@ -16,25 +16,16 @@ const answerSheetsUtils = require("./utils/answerSheetsUtils");
 const { generateLayout } = require('./utils/layoutGenerator');
 const { createAnswerSheetsPDF } = require('./utils/layoutGenerator'); // or wherever it's defined
 
-async function getTosItems(tosId) {
-  const [rows] = await pool.query('SELECT * FROM tos_items WHERE tos_id = ?', [tosId]);
-  return rows;
-}
+const express = require('express');
+const mysql = require('mysql2/promise');
+const cors = require('cors');
 
-async function startServer() {
-  const tosItems = await getTosItems(2); // Replace with desired TOS ID
-  const pdfBuffer = await generateLayout(tosItems);
-  console.log('PDF generated successfully');
-  
-}
+require('dotenv').config();
 
-startServer(); // 👈 Add this line
+app.use(cors());
+app.use(express.json());
 
-const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
-
-// Middleware
-
-// Create MySQL pool
+// ✅ Define the pool first
 const pool = mysql.createPool({
   host: 'metro.proxy.rlwy.net',
   user: 'root',
@@ -42,18 +33,36 @@ const pool = mysql.createPool({
   database: 'railway',
   port: 32705
 });
-const allowedOrigins = ['http://localhost:8100', 'https://your-production-frontend.com'];
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+
+// ✅ Example async function using the pool
+async function getTosItems(tosId) {
+  const [rows] = await pool.query('SELECT * FROM tos_items WHERE tos_id = ?', [tosId]);
+  return rows;
+}
+
+// ✅ Start the server after pool is ready
+async function startServer() {
+  try {
+    console.log('✅ DATABASE_URL:', process.env.DATABASE_URL);
+
+    // Optional test query
+    const testItems = await getTosItems(1);
+    console.log('Test TOS Items:', testItems);
+
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+    });
+
+  } catch (error) {
+    console.error('❌ Error starting server:', error);
+  }
+}
+
+startServer();
+
+const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
+
+// Middleware
 
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
