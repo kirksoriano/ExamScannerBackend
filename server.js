@@ -14,14 +14,19 @@ const PORT = process.env.PORT || 5001;
 const answerSheetsUtils = require("./utils/answerSheetsUtils");
 const { generateLayout } = require('./utils/layoutGenerator');
 
-async function startServer() {
-  const pdfBuffer = await generateLayout(tosItems);
-  // more logic here
+async function getTosItems(tosId) {
+  const [rows] = await pool.query('SELECT * FROM tos_items WHERE tos_id = ?', [tosId]);
+  return rows;
 }
 
-startServer();
-const { createAnswerSheetsPDF } = require("./routes/answerSheets");
-const answerSheetsRoutes = require("./routes/answerSheets");
+async function startServer() {
+  const tosItems = await getTosItems(2); // Replace with desired TOS ID
+  const pdfBuffer = await generateLayout(tosItems);
+  console.log('PDF generated successfully');
+  
+}
+
+startServer(); // 👈 Add this line
 
 const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
 
