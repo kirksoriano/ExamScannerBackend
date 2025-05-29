@@ -16,7 +16,6 @@ const answerSheetsUtils = require("./utils/answerSheetsUtils");
 const { generateLayout } = require('./utils/layoutGenerator');
 const { createAnswerSheetsPDF } = require('./utils/layoutGenerator'); // or wherever it's defined
 
-const mysql = require('mysql2/promise');
 const cors = require('cors');
 
 require('dotenv').config();
