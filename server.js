@@ -33,6 +33,15 @@ startServer(); // 👈 Add this line
 const HUGGING_FACE_TOKEN = process.env.HUGGING_FACE_TOKEN;
 
 // Middleware
+
+// Create MySQL pool
+const pool = mysql.createPool({
+  host: 'metro.proxy.rlwy.net',
+  user: 'root',
+  password: 'wgtxkWfJVEjbxwPzcyvVvRFyWRSYKsZU',
+  database: 'railway',
+  port: 32705
+});
 const allowedOrigins = ['http://localhost:8100', 'https://your-production-frontend.com'];
 app.use(cors({
   origin: function (origin, callback) {
