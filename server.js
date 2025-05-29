@@ -11,7 +11,7 @@ const axios = require("axios");
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-const answerSheetsRoutes = require('./routes/answerSheetsRoutes');
+const answerSheetsRoutes = require('./routes/answerSheets');
 const answerSheetsUtils = require("./utils/answerSheetsUtils");
 const { generateLayout } = require('./utils/layoutGenerator');
 
