@@ -20,7 +20,7 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ✅ Database Pool
-const pool = mysql.createPool({
+const db = mysql.createPool({
   host: 'metro.proxy.rlwy.net',
   user: 'root',
   password: 'wgtxkWfJVEjbxwPzcyvVvRFyWRSYKsZU',
