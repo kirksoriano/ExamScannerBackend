@@ -91,7 +91,6 @@ async function startServer() {
 
 startServer();
 
-// Upload Header Image
 // ✅ Upload Header Image
 app.post("/upload-header", upload.single("header"), async (req, res) => {
   const { studentId, answerSheetsId } = req.body;
@@ -158,7 +157,35 @@ app.get("/tos/:id/items", async (req, res) => {
   }
 });
 
+router.post('/generate-layout', async (req, res) => {
+  const { tosId, title, tosRows } = req.body;
 
+  if (!tosId || !title || !Array.isArray(tosRows) || tosRows.length === 0) {
+    return res.status(400).json({ error: 'Missing required data' });
+  }
+
+  try {
+    const pdfBytes = await layoutGenerator.generateLayout({ subject: title }, tosRows.length);
+
+    // ✅ Return base64-encoded PDF
+    const base64PDF = Buffer.from(pdfBytes).toString('base64');
+
+    res.json({ pdfBase64: base64PDF });
+  } catch (error) {
+    console.error('❌ Layout generation failed:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/test-generate-layout', async (req, res) => {
+  const dummyTOS = { subject: 'Science' };
+  const pdfBuffer = await generateLayout(dummyTOS, 20);
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': 'attachment; filename=dummy_answer_sheet.pdf',
+  });
+  res.send(pdfBuffer);
+});
 
 // ✅ Generate Layout from TOS
 app.post('/answerSheets/generate-layout', async (req, res) => {
@@ -200,8 +227,6 @@ app.post('/answerSheets/generate-layout', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-
 
 // ✅ Submit Detected Answers
 app.post("/submit-answers", async (req, res) => {

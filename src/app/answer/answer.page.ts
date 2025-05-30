@@ -34,6 +34,7 @@ export class AnswerPage implements OnInit {
   answerOptions = ['A', 'B', 'C', 'D'];
   answerSheets: any[] = [];
   selectedAnswerSheet: any = null;
+  classId: string = '';  // 👈 This line is required to fix the error
 
   cognitiveLevelCounts: { [key: string]: number } = {};
   topicCounts: { [key: string]: number } = {};
@@ -96,44 +97,40 @@ export class AnswerPage implements OnInit {
   }
 
   generateLayout() {
-    console.log('📦 Attempting to generate layout with:', {
+    const payload = {
       tosId: this.tosId,
-      title: this.title,
-      tosRowsLength: this.tosRows.length
-    });
-
-    if (!this.tosId || !this.title || this.tosRows.length === 0) {
-      console.error('❌ Missing required data to generate layout.', {
-        tosId: this.tosId,
-        title: this.title,
-        tosRowsLength: this.tosRows.length
-      });
-      alert('Cannot generate layout: Missing TOS items or title.');
-      return;
-    }
-
-    const body = {
-      tosId: this.tosId,
-      classId: 1, // Replace with actual classId if needed
+      classId: this.classId,
       title: this.title,
       tosRows: this.tosRows
     };
-
-    console.log('📨 Sending layout generation request:', body);
-
-    this.http.post(`${this.BASE_URL}/answerSheets/generate-layout`, body).subscribe({
-      next: (response: any) => {
-        console.log('✅ Layout generated:', response);
-        this.layoutZones = response.layout || [];
+  
+    if (!payload.tosId || !payload.title || this.tosRows.length === 0) {
+      console.error('❌ Missing required data to generate layout.', payload);
+      return;
+    }
+  
+    this.http.post<any>(`${this.BASE_URL}/answerSheets/generate-layout`, payload).subscribe(
+      response => {
+        const base64 = response.pdfBase64;
+  
+        // Create a Blob and download
+        const byteArray = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+  
+        // Open or download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'answer-sheet.pdf';
+        link.click();
+  
+        URL.revokeObjectURL(url); // cleanup
       },
-      error: (error) => {
-        console.error('❌ Error generating layout:', error);
-        if (error.status === 400) {
-          alert('Bad Request: Please ensure all required fields are filled.');
-        }
+      error => {
+        console.error('❌ Layout Generation Error:', error);
       }
-    });
-  }
+    );
+  }  
 
   uploadHeaderImage(file: File, studentId: number, answerSheetsId: number) {
     if (!file || !studentId || !answerSheetsId) {

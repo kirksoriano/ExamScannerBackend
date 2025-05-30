@@ -8,7 +8,11 @@
     <!-- In future, render a visual preview using canvas or SVG -->
   </div>
 
-  <ion-button expand="block" (click)="generateLayout()">Generate Layout</ion-button>
+  <ion-button 
+  (click)="generateLayout()" 
+  [disabled]="tosRows.length === 0">
+  Generate Layout
+</ion-button>
 
   <!-- ANSWER SHEET -->
   <div class="answer-sheet-container" *ngIf="layoutZones.length > 0">
