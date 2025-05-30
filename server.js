@@ -92,6 +92,7 @@ async function startServer() {
 startServer();
 
 // Upload Header Image
+// ✅ Upload Header Image
 app.post("/upload-header", upload.single("header"), async (req, res) => {
   const { studentId, answerSheetsId } = req.body;
   try {
@@ -106,30 +107,28 @@ app.post("/upload-header", upload.single("header"), async (req, res) => {
   }
 });
 
-// Printable Answer Sheet PDF
+// ✅ Generate Answer Sheet PDF
 app.get("/answer-sheet-printable/:tos_id", async (req, res) => {
-  const { tos_id } = req.params;
   try {
-    const pdfBuffer = await createAnswerSheetsPDF(tos_id);
+    const pdfBuffer = await createAnswerSheetsPDF(req.params.tos_id);
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename=answer_sheet_${tos_id}.pdf`
+      'Content-Disposition': `attachment; filename=answer_sheet_${req.params.tos_id}.pdf`
     });
     res.send(pdfBuffer);
   } catch (err) {
     console.error("❌ PDF generation error:", err.message);
     res.status(500).json({ error: "Failed to generate answer sheet PDF" });
   }
-});
-
-// Get Layout for a TOS
-this.http.get<any>(`${this.BASE_URL}/answer-sheet-layout/${this.tosId}`).subscribe({
-  next: (data) => {
-    console.log('✅ Preview layout loaded:', data);
-    this.layoutZones = data.layout;
-  },
-  error: (err) => {
-    console.error('❌ Error loading layout preview:', err);
+})
+// ✅ Get TOS for a Teacher
+app.get("/tos/user/:userId", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM tos WHERE teacher_id = ?", [req.params.userId]);
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Error fetching TOS:", err.message);
+    res.status(500).json({ error: "Failed to fetch TOS." });
   }
 });
 
@@ -146,14 +145,12 @@ app.get("/tos/user/:userId", async (req, res) => {
   }
 });
 
-// Get items (table_data) of a specific TOS by ID
+
+// ✅ Get TOS Items
 app.get("/tos/:id/items", async (req, res) => {
-  const { id } = req.params;
   try {
-    const [rows] = await db.query("SELECT table_data FROM tos WHERE id = ?", [id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "TOS not found." });
-    }
+    const [rows] = await db.query("SELECT table_data FROM tos WHERE id = ?", [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: "TOS not found." });
     res.json({ items: JSON.parse(rows[0].table_data) });
   } catch (err) {
     console.error("❌ Error fetching TOS items:", err.message);
@@ -161,46 +158,33 @@ app.get("/tos/:id/items", async (req, res) => {
   }
 });
 
+
+
+// ✅ Generate Layout from TOS
 app.post('/answerSheets/generate-layout', async (req, res) => {
   const { tosId, title, classId } = req.body;
-
-  if (!tosId || !title || !classId) {
-    return res.status(400).json({ error: 'Missing required fields: tosId, title, or classId' });
-  }
+  if (!tosId || !title || !classId) return res.status(400).json({ error: 'Missing required fields' });
 
   try {
-    // 1. Get the tos_items for the given tosId
-    const [tosItems] = await db.query(
-      'SELECT * FROM tos_items WHERE tos_id = ?',
-      [tosId]
-    );
-
-    if (tosItems.length === 0) {
-      return res.status(404).json({ error: 'No TOS items found for this TOS ID' });
-    }
+    const [tosItems] = await db.query('SELECT * FROM tos_items WHERE tos_id = ?', [tosId]);
+    if (!tosItems.length) return res.status(404).json({ error: 'No TOS items found' });
 
     const cognitiveLevels = ['remembering', 'understanding', 'applying', 'analyzing', 'evaluating', 'creating'];
     const layout = [];
 
-    let questionNumber = 1;
-    let row = 0;
-    let column = 0;
-    const maxColumns = 5; // adjust as needed (e.g. 5 questions per row)
+    let questionNumber = 1, row = 0, column = 0, maxColumns = 5;
 
-    // 2. Generate layout zones from each cognitive level
     for (const item of tosItems) {
       for (const level of cognitiveLevels) {
         const count = Number(item[level]);
-
         for (let i = 0; i < count; i++) {
           layout.push({
             questionNumber: questionNumber++,
             topic: item.topic,
             cognitiveLevel: level,
-            row: row,
-            column: column
+            row,
+            column
           });
-
           column++;
           if (column >= maxColumns) {
             column = 0;
@@ -210,16 +194,16 @@ app.post('/answerSheets/generate-layout', async (req, res) => {
       }
     }
 
-    return res.json({ layout });
-
+    res.json({ layout });
   } catch (error) {
-    console.error('❌ Error generating layout:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ Error generating layout:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 
-// Submit Detected Answers
+
+// ✅ Submit Detected Answers
 app.post("/submit-answers", async (req, res) => {
   const { studentId, answerSheetsId, detectedAnswers } = req.body;
   try {
@@ -233,12 +217,14 @@ app.post("/submit-answers", async (req, res) => {
       "INSERT INTO results (student_id, answer_sheet_id, score, topic_breakdown) VALUES (?, ?, ?, ?)",
       [studentId, answerSheetsId, scoreReport.totalScore, JSON.stringify(scoreReport.topicBreakdown)]
     );
+
     res.json({ success: true, report: scoreReport });
   } catch (err) {
     console.error("❌ Error submitting answers:", err.message);
     res.status(500).json({ error: "Failed to submit answers" });
   }
 });
+
 
 // ✅ Fetch all classes for a specific teacher
 app.get('/classes', async (req, res) => {

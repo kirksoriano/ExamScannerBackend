@@ -26,7 +26,7 @@ export class AnswerPage implements OnInit {
   @Input() subjectName: string = '';
   @Input() title: string = 'Exam Title';
 
-  tosId: number = 0;
+  tosId: number = 1;
   BASE_URL = 'https://examscannerbackend-production-7460.up.railway.app';
 
   totalQuestions: number = 0;
@@ -47,91 +47,79 @@ export class AnswerPage implements OnInit {
   ) {}
 
   ngOnInit() {
-    const idParam = this.route.snapshot.paramMap.get('id');
-    this.tosId = idParam ? Number(idParam) : 0;
-
-    console.log('📌 Loaded tosId:', this.tosId);
-    if (!this.tosId) {
-      console.error('❌ Invalid or missing TOS ID in route.');
-      return;
-    }
-
+    this.tosId = Number(this.route.snapshot.paramMap.get('id'));
     this.loadTOSDetails();
     this.loadTOSItems();
   }
 
   loadTOSDetails() {
-    this.http.get(`${this.BASE_URL}/tos/${this.tosId}`).subscribe({
-      next: (tos: any) => {
-        this.title = tos.title || 'Exam Title';
-        this.subjectName = tos.subject || '';
-        this.className = tos.className || '';
-
-        console.log('📘 TOS Details:', { title: this.title, subject: this.subjectName, class: this.className });
-      },
-      error: (err) => {
-        console.error('❌ Failed to load TOS details:', err);
-      }
+    this.http.get(`${this.BASE_URL}/tos/${this.tosId}`).subscribe((tos: any) => {
+      this.title = tos.title || 'Exam Title';
+      this.subjectName = tos.subject || '';
+      this.className = tos.className || '';
     });
   }
 
   loadTOSItems() {
-    this.http.get<any>(`${this.BASE_URL}/tos/${this.tosId}/items`).subscribe({
-      next: (response) => {
-        const items = response.items || [];
+    this.http.get<any>(`${this.BASE_URL}/tos/${this.tosId}/items`).subscribe((response) => {
+      const items = response.items || [];
 
-        const cognitiveLevels = ['remembering', 'understanding', 'applying', 'analyzing', 'evaluating', 'creating'];
+      const cognitiveLevels = ['remembering', 'understanding', 'applying', 'analyzing', 'evaluating', 'creating'];
 
-        this.tosRows = items.map((item: any) => {
-          const maxLevel = cognitiveLevels.reduce((prev, curr) =>
-            item[curr] > item[prev] ? curr : prev, 'remembering'
-          );
+      this.tosRows = items.map((item: any) => {
+        const maxLevel = cognitiveLevels.reduce((prev, curr) =>
+          item[curr] > item[prev] ? curr : prev, 'remembering'
+        );
 
-          return {
-            topic: item.topic || 'Unknown',
-            cognitiveLevel: maxLevel,
-            numberOfItems: item.total_no_of_items || item.no_of_items || 0
-          };
-        });
+        return {
+          topic: item.topic || 'Unknown',
+          cognitiveLevel: maxLevel,
+          numberOfItems: item.total_no_of_items || item.no_of_items || 0
+        };
+      });
 
-        this.totalQuestions = this.tosRows.reduce((sum, row) => sum + row.numberOfItems, 0);
+      this.totalQuestions = this.tosRows.reduce((sum, row) => sum + row.numberOfItems, 0);
 
-        this.cognitiveLevelCounts = this.tosRows.reduce((acc: any, row) => {
-          acc[row.cognitiveLevel] = (acc[row.cognitiveLevel] || 0) + row.numberOfItems;
-          return acc;
-        }, {});
+      this.cognitiveLevelCounts = this.tosRows.reduce((acc: any, row) => {
+        acc[row.cognitiveLevel] = (acc[row.cognitiveLevel] || 0) + row.numberOfItems;
+        return acc;
+      }, {});
 
-        this.topicCounts = this.tosRows.reduce((acc: any, row) => {
-          acc[row.topic] = (acc[row.topic] || 0) + row.numberOfItems;
-          return acc;
-        }, {});
+      this.topicCounts = this.tosRows.reduce((acc: any, row) => {
+        acc[row.topic] = (acc[row.topic] || 0) + row.numberOfItems;
+        return acc;
+      }, {});
 
-        console.log('📄 Loaded TOS Items:', this.tosRows);
-      },
-      error: (err) => {
-        console.error('❌ Failed to load TOS items:', err);
-      }
+      // Optional: auto-generate layout after loading TOS
+      // this.generateLayout();
     });
   }
 
   generateLayout() {
+    console.log('📦 Attempting to generate layout with:', {
+      tosId: this.tosId,
+      title: this.title,
+      tosRowsLength: this.tosRows.length
+    });
+
     if (!this.tosId || !this.title || this.tosRows.length === 0) {
       console.error('❌ Missing required data to generate layout.', {
         tosId: this.tosId,
         title: this.title,
         tosRowsLength: this.tosRows.length
       });
+      alert('Cannot generate layout: Missing TOS items or title.');
       return;
     }
 
     const body = {
       tosId: this.tosId,
-      classId: 1, // Optional: replace with dynamic classId if available
+      classId: 1, // Replace with actual classId if needed
       title: this.title,
       tosRows: this.tosRows
     };
 
-    console.log('📦 Sending layout request body:', body);
+    console.log('📨 Sending layout generation request:', body);
 
     this.http.post(`${this.BASE_URL}/answerSheets/generate-layout`, body).subscribe({
       next: (response: any) => {
@@ -146,6 +134,30 @@ export class AnswerPage implements OnInit {
       }
     });
   }
+
+  uploadHeaderImage(file: File, studentId: number, answerSheetsId: number) {
+    if (!file || !studentId || !answerSheetsId) {
+      console.error('❌ Missing file or required IDs for header upload.');
+      return;
+    }
+  
+    const formData = new FormData();
+    formData.append('header', file); // 'header' must match backend field name
+    formData.append('studentId', studentId.toString());
+    formData.append('answerSheetsId', answerSheetsId.toString());
+  
+    this.http.post(`${this.BASE_URL}/upload-header`, formData).subscribe({
+      next: (res: any) => {
+        console.log('✅ Header image uploaded successfully:', res);
+        alert('Header image uploaded!');
+      },
+      error: (err) => {
+        console.error('❌ Failed to upload header image:', err);
+        alert('Header image upload failed.');
+      }
+    });
+  }
+  
 
   previewLayout() {
     if (!this.tosId) {
@@ -175,7 +187,6 @@ export class AnswerPage implements OnInit {
     }).subscribe({
       next: (blob) => {
         saveAs(blob, `answer-sheet-${this.tosId}.pdf`);
-        console.log('📄 PDF downloaded.');
       },
       error: (err) => {
         console.error('❌ PDF generation failed:', err);

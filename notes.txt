@@ -347,3 +347,14 @@ if (require.main === module) {
   </ion-list>
 
   <ion-text color="danger" *ngIf="errorMessage">{{ errorMessage }}</ion-text>
+
+  // Get Layout for a TOS
+this.http.get<any>(`${this.BASE_URL}/answer-sheet-layout/${this.tosId}`).subscribe({
+  next: (data) => {
+    console.log('✅ Preview layout loaded:', data);
+    this.layoutZones = data.layout;
+  },
+  error: (err) => {
+    console.error('❌ Error loading layout preview:', err);
+  }
+});
