@@ -157,7 +157,7 @@ app.get("/tos/:id/items", async (req, res) => {
   }
 });
 
-router.post('/generate-layout', async (req, res) => {
+app.post('/generate-layout', async (req, res) => {
   const { tosId, title, tosRows } = req.body;
 
   if (!tosId || !title || !Array.isArray(tosRows) || tosRows.length === 0) {
