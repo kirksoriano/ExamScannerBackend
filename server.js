@@ -156,16 +156,13 @@ app.get("/tos/user/:userId", async (req, res) => {
 // ✅ Get TOS Items
 app.get("/tos/:id/items", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT table_data FROM tos WHERE id = ?", [req.params.id]);
-    if (rows.length === 0) return res.status(404).json({ error: "TOS not found." });
+    const tosId = req.params.id;
 
-    // 🔒 Disable caching to avoid 304 Not Modified issues
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Surrogate-Control', 'no-store');
+    // Fetch all TOS items linked to this TOS
+    const [items] = await db.query("SELECT * FROM tos_items WHERE tos_id = ?", [tosId]);
 
-    res.json({ items: JSON.parse(rows[0].table_data) });
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ items });
   } catch (err) {
     console.error("❌ Error fetching TOS items:", err.message);
     res.status(500).json({ error: "Failed to fetch TOS items." });
