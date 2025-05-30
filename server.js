@@ -159,6 +159,7 @@ app.get("/tos/:id/items", async (req, res) => {
     const [rows] = await db.query("SELECT table_data FROM tos WHERE id = ?", [req.params.id]);
     if (rows.length === 0) return res.status(404).json({ error: "TOS not found." });
 
+    // 🔒 Disable caching to avoid 304 Not Modified issues
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
