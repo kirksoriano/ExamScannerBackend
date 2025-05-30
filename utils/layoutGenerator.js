@@ -160,5 +160,7 @@ async function generateAnswerSheetLayout(tos, questionCount = 20) {
 
 // ✅ Proper exports
 module.exports = {
-  generateLayout: generateAnswerSheetLayout
+  generateLayout: generateAnswerSheetLayout,
+  createAnswerSheetsPDF: generateAnswerSheetLayout
 };
+

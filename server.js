@@ -109,7 +109,14 @@ app.post("/upload-header", upload.single("header"), async (req, res) => {
 // ✅ Generate Answer Sheet PDF
 app.get("/answer-sheet-printable/:tos_id", async (req, res) => {
   try {
-    const pdfBuffer = await createAnswerSheetsPDF(req.params.tos_id);
+    const [tosRows] = await db.query('SELECT * FROM tos WHERE id = ?', [req.params.tos_id]);
+    if (!tosRows.length) return res.status(404).json({ error: "TOS not found" });
+
+    const tos = { subject: tosRows[0].subject || 'N/A' };
+    const questionCount = 20; // or derive dynamically
+
+    const pdfBuffer = await generateLayout(tos, questionCount);
+
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=answer_sheet_${req.params.tos_id}.pdf`
@@ -119,7 +126,8 @@ app.get("/answer-sheet-printable/:tos_id", async (req, res) => {
     console.error("❌ PDF generation error:", err.message);
     res.status(500).json({ error: "Failed to generate answer sheet PDF" });
   }
-})
+});
+
 // ✅ Get TOS for a Teacher
 app.get("/tos/user/:userId", async (req, res) => {
   try {
