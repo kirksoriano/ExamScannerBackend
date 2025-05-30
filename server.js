@@ -158,6 +158,12 @@ app.get("/tos/:id/items", async (req, res) => {
   try {
     const [rows] = await db.query("SELECT table_data FROM tos WHERE id = ?", [req.params.id]);
     if (rows.length === 0) return res.status(404).json({ error: "TOS not found." });
+
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+
     res.json({ items: JSON.parse(rows[0].table_data) });
   } catch (err) {
     console.error("❌ Error fetching TOS items:", err.message);
