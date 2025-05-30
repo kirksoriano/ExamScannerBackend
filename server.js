@@ -343,6 +343,23 @@ app.get('/classes/:classId/students', async (req, res) => {
     }
 });
 
+// 🔍 Fetch a class by its assigned TOS ID
+app.get('/classes/tos/:tosId', async (req, res) => {
+  const { tosId } = req.params;
+
+  try {
+    const [rows] = await db.execute('SELECT * FROM classes WHERE tos_id = ?', [tosId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Class not found for this TOS ID' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('❌ Error fetching class by TOS ID:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 // POST /students - Add a student to a class
 app.post('/students', async (req, res) => {
     const { name, grade_level, class_id } = req.body;

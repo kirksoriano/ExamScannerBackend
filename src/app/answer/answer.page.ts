@@ -60,7 +60,18 @@ export class AnswerPage implements OnInit {
       this.className = tos.className || '';
     });
   }
-
+  loadClassByTOS() {
+    this.http.get<any>(`${this.BASE_URL}/classes/tos/${this.tosId}`).subscribe({
+      next: (cls) => {
+        this.classId = cls.id.toString();  // ✅ dynamic assignment
+        console.log('✅ Loaded class for TOS:', cls);
+      },
+      error: (err) => {
+        console.error('❌ Failed to load class for TOS:', err);
+      }
+    });
+  }
+  
   loadTOSItems() {
     this.http.get<any>(`${this.BASE_URL}/tos/${this.tosId}/items`).subscribe((response) => {
       const items = response.items || [];
