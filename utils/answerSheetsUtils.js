@@ -15,7 +15,7 @@ function generateAnswerSheetLayout(subject, numberOfQuestions, optionsPerQuestio
       };
   
       for (let j = 0; j < optionsPerQuestion; j++) {
-        const optionLabel = String.fromCharCode(65 + j); // A, B, C, D, E...
+        const optionLabel = String.fromCharCode(65 + j); // A, B, C, D
         question.options.push({
           label: optionLabel,
           isCorrect: false, // default
