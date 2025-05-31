@@ -205,7 +205,8 @@ app.post('/answerSheets/generate-layout', async (req, res) => {
   if (!tosId || !title || !classId) return res.status(400).json({ error: 'Missing required fields' });
 
   try {
-    const [tosItems] = await db.query('SELECT * FROM tos_items WHERE tos_id = ?', [tosId]);
+    // Fetch TOS items
+    const [tosItems] = await db.query('SELECT * FROM tos_items WHERE tos_id = ? ORDER BY id ASC', [tosId]);
     if (!tosItems.length) return res.status(404).json({ error: 'No TOS items found' });
 
     const cognitiveLevels = ['remembering', 'understanding', 'applying', 'analyzing', 'evaluating', 'creating'];
@@ -213,6 +214,7 @@ app.post('/answerSheets/generate-layout', async (req, res) => {
 
     let questionNumber = 1, row = 0, column = 0, maxColumns = 5;
 
+    // Build layout in memory
     for (const item of tosItems) {
       for (const level of cognitiveLevels) {
         const count = Number(item[level]);
@@ -233,7 +235,35 @@ app.post('/answerSheets/generate-layout', async (req, res) => {
       }
     }
 
-    res.json({ layout });
+    // Insert into answer_sheets
+    const [answerSheetResult] = await db.query(
+      'INSERT INTO answer_sheets (title, class_id, tos_id) VALUES (?, ?, ?)',
+      [title, classId, tosId]
+    );
+
+    const answerSheetId = answerSheetResult.insertId;
+
+    // Insert each question into questions table
+    const insertValues = layout.map(q => [
+      answerSheetId,
+      q.questionNumber,
+      q.topic,
+      q.cognitiveLevel,
+      q.row,
+      q.column
+    ]);
+
+    await db.query(
+      'INSERT INTO questions (answer_sheet_id, question_number, topic, cognitive_level, row, column) VALUES ?',
+      [insertValues]
+    );
+
+    res.json({
+      answerSheetId,
+      title,
+      classId,
+      layout
+    });
   } catch (error) {
     console.error('❌ Error generating layout:', error.message);
     res.status(500).json({ error: 'Internal server error' });

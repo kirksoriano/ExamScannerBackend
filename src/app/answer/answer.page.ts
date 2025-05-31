@@ -125,7 +125,6 @@ export class AnswerPage implements OnInit {
       tosId: this.tosId,
       classId: this.classId,
       title: this.title,
-      tosRows: this.tosRows
     };
   
     // ✅ Improved error checking
