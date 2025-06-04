@@ -18,7 +18,11 @@ export class AuthService {
     const data = localStorage.getItem('userData');
     return data ? JSON.parse(data) : null;
   }
-
+  getCurrentUserId(): number {
+    const userData = this.getUserData();
+    return userData && userData.id ? userData.id : 0;
+  }
+  
   setUserData(user: any) {
     localStorage.setItem('userData', JSON.stringify(user));
   }

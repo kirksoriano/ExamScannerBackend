@@ -91,6 +91,80 @@ async function startServer() {
 
 startServer();
 
+// ✅ Register User
+app.post("/register", async (req, res) => {
+    const { email, password, name } = req.body;
+    if (!email || !password || !name) {
+        return res.status(400).json({ message: "Missing required fields." });
+    }
+
+    try {
+        const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+        if (existing.length > 0) {
+            return res.status(409).json({ message: "Email already registered." });
+        }
+
+        // Store password as plain text for now
+        const [result] = await db.query(
+            "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+            [email, password, name]
+        );
+        
+        return res.status(201).json({
+            message: "User registered successfully.",
+            user: {
+                id: result.insertId,
+                email,
+                name
+            }
+        });
+    } catch (err) {
+        console.error("❌ Registration error:", err);
+        return res.status(500).json({ message: "Server error during registration." });
+    }
+});
+
+// ✅ Login User
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Missing email or password' });
+    }
+
+    try {
+        const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+
+        if (rows.length === 0) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        const user = rows[0];
+        
+        // Compare the password directly (no bcrypt)
+        if (user.password !== password) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        // Create a JWT token if the password matches
+        const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        res.json({
+            message: 'Login successful',
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email
+            },
+            token  // Send the token to the frontend
+        });
+
+    } catch (error) {
+        console.error('❌ Login error:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 // ✅ Upload Header Image
 app.post("/upload-header", upload.single("header"), async (req, res) => {
   const { studentId, answerSheetsId } = req.body;
