@@ -30,9 +30,9 @@
       <ion-label>Test Paper Processing</ion-label>
     </ion-item>
 
-    <ion-item *ngFor="let tos of tosList" button (click)="goToAnswer(tos.id)">
+    <ion-item button (click)="goToAnswer">
       <ion-icon name="document-text" slot="start"></ion-icon>
-      <ion-label>{{ tos.title }}</ion-label>
+      <ion-label>Answer Sheet</ion-label>
     </ion-item>
 
 

@@ -84,8 +84,8 @@ ngOnInit() {
     this.navCtrl.navigateForward('/test-processing');
   }
 
-  goToAnswer(tosId: number) {
-  this.navCtrl.navigateForward(`/answer/${tosId}`);
+  goToAnswer() {
+  this.navCtrl.navigateForward(`/answer`);
 }
 
 
